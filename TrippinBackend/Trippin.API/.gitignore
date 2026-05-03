@@ -15,8 +15,21 @@
 
 # Secrets
 usersecrets.json
-# appsettings.Development.json (Optional: usually kept for dev, but can be ignored)
+ appsettings.Development.json (Optional: usually kept for dev, but can be ignored)
+appsettings.json
+# Keep example file
+!appsettings.example.json
 
+# Frontend
+TrippinFrontend/node_modules/
+TrippinFrontend/dist/
+
+# Backend
+TrippinBackend/**/bin/
+TrippinBackend/**/obj/
+# Env
+.env
+.env.local
 # Tools
 .tools/
 .nupkg/
