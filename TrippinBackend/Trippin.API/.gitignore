@@ -1,0 +1,26 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Visual Studio 2015/2017 cache/options directory
+.vs/
+
+# Secrets
+usersecrets.json
+# appsettings.Development.json (Optional: usually kept for dev, but can be ignored)
+
+# Tools
+.tools/
+.nupkg/
+
+# IDEs
+.vscode/
+.idea/
