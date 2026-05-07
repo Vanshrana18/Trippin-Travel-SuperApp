@@ -21,6 +21,7 @@ import Tilt3D from '../components/animations/Tilt3D';
 import StaggerContainer, { StaggerItem } from '../components/animations/StaggerContainer';
 import LocationMap from '../components/shared/LocationMap';
 import WeatherWidget from '../components/shared/WeatherWidget';
+import AddToTripModal from '../components/shared/AddToTripModal';
 import { motion } from 'framer-motion';
 
 export default function DestinationPage() {
@@ -34,6 +35,7 @@ export default function DestinationPage() {
   const heroOpacity = useTransform(scrollYProgress, [0, 0.25], [1, 0.4]);
 
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [reviewForm, setReviewForm] = useState({ rating: 0, title: '', content: '' });
   const [reviewError, setReviewError] = useState('');
 
@@ -258,11 +260,17 @@ export default function DestinationPage() {
               )}
 
               <div style={{ marginTop: 'var(--space-5)' }}>
-                <Link to={isAuthenticated ? "/trips" : "/register"}>
-                  <Button variant="primary" size="lg" style={{ width: '100%' }}>
-                    <Plane size={16} /> Plan a Trip Here
+                {isAuthenticated ? (
+                  <Button variant="primary" size="lg" style={{ width: '100%' }} onClick={() => setShowAddModal(true)}>
+                    <Plus size={16} /> Add to Trip
                   </Button>
-                </Link>
+                ) : (
+                  <Link to="/register">
+                    <Button variant="primary" size="lg" style={{ width: '100%' }}>
+                      <Plane size={16} /> Plan a Trip Here
+                    </Button>
+                  </Link>
+                )}
               </div>
             </Tilt3D>
           </ScrollReveal>
@@ -318,6 +326,17 @@ export default function DestinationPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Add to Trip Modal */}
+      <AddToTripModal
+        open={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        item={{
+          id: parseInt(id),
+          name: destination.name,
+          type: 'destination'
+        }}
+      />
     </div>
   );
 }

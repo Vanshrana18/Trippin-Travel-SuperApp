@@ -206,39 +206,45 @@ export default function HomePage() {
 
           <StaggerContainer className="features-grid" staggerDelay={0.15}>
             <StaggerItem>
-              <Tilt3D intensity={6} scale={1.02} className="feature-card">
-                <div className="feature-icon terra">
-                  <Map size={24} />
-                </div>
-                <h3 className="feature-title">Smart Trip Builder</h3>
-                <p className="feature-description">
-                  Create multi-destination trips with budget tracking, date management, and collaborative planning tools.
-                </p>
-              </Tilt3D>
+              <Link to="/trips" className="feature-card-link">
+                <Tilt3D intensity={6} scale={1.02} className="feature-card">
+                  <div className="feature-icon terra">
+                    <Map size={24} />
+                  </div>
+                  <h3 className="feature-title">Smart Trip Builder</h3>
+                  <p className="feature-description">
+                    Create multi-destination trips with budget tracking, date management, and collaborative planning tools.
+                  </p>
+                </Tilt3D>
+              </Link>
             </StaggerItem>
 
             <StaggerItem>
-              <Tilt3D intensity={6} scale={1.02} className="feature-card">
-                <div className="feature-icon ocean">
-                  <Bot size={24} />
-                </div>
-                <h3 className="feature-title">AI Itineraries</h3>
-                <p className="feature-description">
-                  Generate personalized day-by-day plans powered by AI. Choose your travel style, budget, and let us handle the rest.
-                </p>
-              </Tilt3D>
+              <Link to="/trips" className="feature-card-link">
+                <Tilt3D intensity={6} scale={1.02} className="feature-card">
+                  <div className="feature-icon ocean">
+                    <Bot size={24} />
+                  </div>
+                  <h3 className="feature-title">AI Itineraries</h3>
+                  <p className="feature-description">
+                    Generate personalized day-by-day plans powered by AI. Choose your travel style, budget, and let us handle the rest.
+                  </p>
+                </Tilt3D>
+              </Link>
             </StaggerItem>
 
             <StaggerItem>
-              <Tilt3D intensity={6} scale={1.02} className="feature-card">
-                <div className="feature-icon sand">
-                  <CalendarCheck size={24} />
-                </div>
-                <h3 className="feature-title">Unified Bookings</h3>
-                <p className="feature-description">
-                  Manage flights, hotels, tours, and activities in one place. Track confirmations, status, and documents effortlessly.
-                </p>
-              </Tilt3D>
+              <Link to="/bookings" className="feature-card-link">
+                <Tilt3D intensity={6} scale={1.02} className="feature-card">
+                  <div className="feature-icon sand">
+                    <CalendarCheck size={24} />
+                  </div>
+                  <h3 className="feature-title">Unified Bookings</h3>
+                  <p className="feature-description">
+                    Manage flights, hotels, tours, and activities in one place. Track confirmations, status, and documents effortlessly.
+                  </p>
+                </Tilt3D>
+              </Link>
             </StaggerItem>
           </StaggerContainer>
         </div>

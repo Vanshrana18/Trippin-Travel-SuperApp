@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../api/axios';
 import { User, Map, DollarSign, Globe, Save, MapPin } from 'lucide-react';
@@ -96,14 +97,18 @@ export default function ProfilePage() {
         {dashboard && (
           <StaggerContainer className="trips-stats" style={{ marginBottom: 'var(--space-10)' }} staggerDelay={0.1}>
             <StaggerItem>
-              <Tilt3D intensity={5} scale={1.02}>
-                <StatCard icon={Map} label="Total Trips" value={<AnimatedCounter value={dashboard.tripCount || 0} />} color="terra" />
-              </Tilt3D>
+              <Link to="/trips" style={{ textDecoration: 'none' }}>
+                <Tilt3D intensity={5} scale={1.02}>
+                  <StatCard icon={Map} label="Total Trips" value={<AnimatedCounter value={dashboard.tripCount || 0} />} color="terra" />
+                </Tilt3D>
+              </Link>
             </StaggerItem>
             <StaggerItem>
-              <Tilt3D intensity={5} scale={1.02}>
-                <StatCard icon={Globe} label="Destinations" value={<AnimatedCounter value={dashboard.destinationsVisited || 0} />} color="ocean" />
-              </Tilt3D>
+              <Link to="/discover" style={{ textDecoration: 'none' }}>
+                <Tilt3D intensity={5} scale={1.02}>
+                  <StatCard icon={Globe} label="Destinations" value={<AnimatedCounter value={dashboard.destinationsVisited || 0} />} color="ocean" />
+                </Tilt3D>
+              </Link>
             </StaggerItem>
             <StaggerItem>
               <Tilt3D intensity={5} scale={1.02}>
@@ -111,9 +116,11 @@ export default function ProfilePage() {
               </Tilt3D>
             </StaggerItem>
             <StaggerItem>
-              <Tilt3D intensity={5} scale={1.02}>
-                <StatCard icon={User} label="Bookings" value={<AnimatedCounter value={dashboard.bookingCount || 0} />} color="success" />
-              </Tilt3D>
+              <Link to="/bookings" style={{ textDecoration: 'none' }}>
+                <Tilt3D intensity={5} scale={1.02}>
+                  <StatCard icon={User} label="Bookings" value={<AnimatedCounter value={dashboard.bookingCount || 0} />} color="success" />
+                </Tilt3D>
+              </Link>
             </StaggerItem>
           </StaggerContainer>
         )}

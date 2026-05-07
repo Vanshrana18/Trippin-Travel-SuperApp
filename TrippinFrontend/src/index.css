@@ -5341,3 +5341,9 @@ html {
   background: var(--danger);
   transform: scale(1.1);
 }
+
+.feature-card-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}

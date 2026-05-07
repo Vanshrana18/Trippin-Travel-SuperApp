@@ -9,6 +9,7 @@ import { useSearch } from '../hooks/useSearch';
 import { useCurrency } from '../contexts/CurrencyContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import Autocomplete from '../components/shared/Autocomplete';
+import AddToTripModal from '../components/shared/AddToTripModal';
 import { airports, stations } from '../data/autocompleteData';
 // Helper to get dynamic dates
 const getDates = () => {
@@ -28,8 +29,15 @@ export default function SearchPage() {
   const { currency } = useCurrency();
   const [activeTab, setActiveTab] = useState('flights');
   const [hasSearched, setHasSearched] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
   
   const { tmwStr, nwStr } = getDates();
+  
+  const handleSaveItem = (type, name, data) => {
+    setSelectedItem({ type, name, data });
+    setShowAddModal(true);
+  };
 
   // Dynamic Initial States
   const [flightForm, setFlightForm] = useState({ origin: 'DEL', destination: 'JFK', departDate: tmwStr, returnDate: nwStr, passengers: 1 });
@@ -446,9 +454,12 @@ export default function SearchPage() {
                                   <span>{flight.destination}</span>
                                 </div>
                               </div>
-                              <div className="flight-action-box">
+                              <div className="flight-action-box" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                 <div className="flight-price-huge">{formatCurrency(flight.price, flight.currency)}</div>
                                 <Button variant="primary" size="lg" onClick={() => window.open(flight.bookingUrl || '#', '_blank')}>Book</Button>
+                                <Button variant="ghost" size="sm" onClick={() => handleSaveItem('flight', `${flight.airline} ${flight.origin}→${flight.destination}`, flight)}>
+                                  <Sparkles size={14} style={{ marginRight: '6px' }} /> Save to Trip
+                                </Button>
                               </div>
                             </div>
                           </StaggerItem>
@@ -486,12 +497,15 @@ export default function SearchPage() {
                                     {[...Array(hotel.starRating || 4)].map((_, i) => <Star key={i} size={14} fill="var(--warning)" color="var(--warning)" />)}
                                   </div>
                                 </div>
-                                <div className="hotel-card-price-action">
+                                <div className="hotel-card-price-action" style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
                                   <div className="price-block">
                                     <span className="price-val">{formatCurrency(hotel.pricePerNight, hotel.currency)}</span>
                                     <span className="price-lbl">/ night</span>
                                   </div>
                                   <Button variant="primary" onClick={() => window.open(hotel.bookingUrl || '#', '_blank')}>View Rooms</Button>
+                                  <Button variant="ghost" size="sm" onClick={() => handleSaveItem('hotel', hotel.name, { ...hotel, price: hotel.pricePerNight })}>
+                                    <Sparkles size={14} style={{ marginRight: '6px' }} /> Save to Trip
+                                  </Button>
                                 </div>
                               </div>
                             </div>
@@ -540,9 +554,12 @@ export default function SearchPage() {
                                   <span>{train.arrivalStation}</span>
                                 </div>
                               </div>
-                              <div className="flight-action-box">
+                              <div className="flight-action-box" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                 <div className="flight-price-huge">{formatCurrency(train.price, train.currency)}</div>
                                 <Button variant="primary" size="lg">Book</Button>
+                                <Button variant="ghost" size="sm" onClick={() => handleSaveItem('train', `${train.trainName} (${train.trainNumber})`, train)}>
+                                  <Sparkles size={14} style={{ marginRight: '6px' }} /> Save to Trip
+                                </Button>
                               </div>
                             </div>
                           </StaggerItem>
@@ -576,9 +593,12 @@ export default function SearchPage() {
                                 <span className="car-type">{taxi.carType}</span>
                                 <div className="taxi-time"><Clock size={14} /> Est: {taxi.estimatedTime}</div>
                               </div>
-                              <div className="taxi-action">
+                              <div className="taxi-action" style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
                                 <div className="taxi-price">{formatCurrency(taxi.price, taxi.currency)}</div>
                                 <Button variant="primary">Reserve</Button>
+                                <Button variant="ghost" size="sm" onClick={() => handleSaveItem('car', `${taxi.company} - ${taxi.carType}`, taxi)}>
+                                  <Sparkles size={14} style={{ marginRight: '6px' }} /> Save to Trip
+                                </Button>
                               </div>
                             </div>
                           </StaggerItem>
@@ -593,6 +613,14 @@ export default function SearchPage() {
           ) : null}
         </AnimatePresence>
       </div>
+
+      {selectedItem && (
+        <AddToTripModal 
+          open={showAddModal} 
+          onClose={() => setShowAddModal(false)} 
+          item={selectedItem} 
+        />
+      )}
     </div>
   );
 }
