@@ -10,6 +10,8 @@ import { useCurrency } from '../contexts/CurrencyContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import Autocomplete from '../components/shared/Autocomplete';
 import AddToTripModal from '../components/shared/AddToTripModal';
+import CustomSelect from '../components/shared/CustomSelect';
+import CustomDatePicker from '../components/shared/CustomDatePicker';
 import { airports, stations } from '../data/autocompleteData';
 // Helper to get dynamic dates
 const getDates = () => {
@@ -40,6 +42,7 @@ export default function SearchPage() {
   };
 
   // Dynamic Initial States
+  const [tripType, setTripType] = useState('round'); // 'one' or 'round'
   const [flightForm, setFlightForm] = useState({ origin: 'DEL', destination: 'JFK', departDate: tmwStr, returnDate: nwStr, passengers: 1 });
   const [hotelForm, setHotelForm] = useState({ location: 'Paris', checkIn: tmwStr, checkOut: nwStr, guests: 2 });
   const [trainForm, setTrainForm] = useState({ source: 'NDLS', destination: 'BCT', date: tmwStr });
@@ -48,7 +51,7 @@ export default function SearchPage() {
   // Filters State
   const [filters, setFilters] = useState({
     stops: ['0', '1', '2+'],
-    maxPrice: 5000
+    maxPrice: 200000 // Increased default for INR/USD compatibility
   });
 
   const toggleStopFilter = (stopValue) => {
@@ -204,6 +207,16 @@ export default function SearchPage() {
           {/* Forms */}
           <div className="mega-search-body">
               {activeTab === 'flights' && (
+                <div style={{ marginBottom: '16px', display: 'flex', gap: '16px' }}>
+                  <label className={`trip-type-label ${tripType === 'round' ? 'active' : ''}`} onClick={() => setTripType('round')}>
+                    <input type="radio" checked={tripType === 'round'} readOnly style={{ display: 'none' }} /> Round-trip
+                  </label>
+                  <label className={`trip-type-label ${tripType === 'one' ? 'active' : ''}`} onClick={() => setTripType('one')}>
+                    <input type="radio" checked={tripType === 'one'} readOnly style={{ display: 'none' }} /> One-way
+                  </label>
+                </div>
+              )}
+              {activeTab === 'flights' && (
                 <form className="mega-search-bar" onSubmit={handleSearch}>
                   <div className="mega-input-group flight-route-group">
                     <div className="mega-input-cell">
@@ -237,22 +250,36 @@ export default function SearchPage() {
                   <div className="mega-input-divider" />
                   <div className="mega-input-cell">
                     <label>Depart</label>
-                    <input type="date" value={flightForm.departDate} onChange={e => setFlightForm({...flightForm, departDate: e.target.value})} required />
+                    <CustomDatePicker 
+                      value={flightForm.departDate} 
+                      onChange={(val) => setFlightForm({ ...flightForm, departDate: val })}
+                    />
                   </div>
                   <div className="mega-input-divider" />
-                  <div className="mega-input-cell">
+                  <div className={`mega-input-cell ${tripType === 'one' ? 'disabled-cell' : ''}`}>
                     <label>Return</label>
-                    <input type="date" value={flightForm.returnDate} onChange={e => setFlightForm({...flightForm, returnDate: e.target.value})} />
+                    {tripType === 'one' ? (
+                      <div className="disabled-placeholder">One-way only</div>
+                    ) : (
+                      <CustomDatePicker 
+                        value={flightForm.returnDate} 
+                        onChange={(val) => setFlightForm({ ...flightForm, returnDate: val })}
+                      />
+                    )}
                   </div>
                   <div className="mega-input-divider" />
                   <div className="mega-input-cell">
                     <label>Travellers</label>
-                    <select value={flightForm.passengers} onChange={e => setFlightForm({...flightForm, passengers: parseInt(e.target.value)})}>
-                      <option value={1}>1 Adult, Economy</option>
-                      <option value={2}>2 Adults, Economy</option>
-                      <option value={3}>3 Adults, Economy</option>
-                      <option value={4}>4 Adults, Economy</option>
-                    </select>
+                    <CustomSelect 
+                      value={flightForm.passengers} 
+                      onChange={(val) => setFlightForm({ ...flightForm, passengers: val })}
+                      options={[
+                        { value: 1, label: '1 Adult, Economy' },
+                        { value: 2, label: '2 Adults, Economy' },
+                        { value: 3, label: '3 Adults, Economy' },
+                        { value: 4, label: '4 Adults, Economy' },
+                      ]}
+                    />
                   </div>
                   <button type="submit" className="mega-submit-btn" disabled={isSearching}>
                     {isSearching ? <span className="loader-spin" /> : 'Search'}
@@ -269,22 +296,34 @@ export default function SearchPage() {
                   <div className="mega-input-divider" />
                   <div className="mega-input-cell">
                     <label>Check In</label>
-                    <input type="date" value={hotelForm.checkIn} onChange={e => setHotelForm({...hotelForm, checkIn: e.target.value})} required />
+                    <CustomDatePicker 
+                      value={hotelForm.checkIn} 
+                      onChange={(val) => setHotelForm({ ...hotelForm, checkIn: val })}
+                    />
                   </div>
                   <div className="mega-input-divider" />
                   <div className="mega-input-cell">
                     <label>Check Out</label>
-                    <input type="date" value={hotelForm.checkOut} onChange={e => setHotelForm({...hotelForm, checkOut: e.target.value})} required />
+                    <CustomDatePicker 
+                      value={hotelForm.checkOut} 
+                      onChange={(val) => setHotelForm({ ...hotelForm, checkOut: val })}
+                    />
                   </div>
                   <div className="mega-input-divider" />
                   <div className="mega-input-cell">
                     <label>Guests</label>
-                    <select value={hotelForm.guests} onChange={e => setHotelForm({...hotelForm, guests: parseInt(e.target.value)})}>
-                      <option value={1}>1 Guest, 1 Room</option>
-                      <option value={2}>2 Guests, 1 Room</option>
-                      <option value={3}>3 Guests, 2 Rooms</option>
-                      <option value={4}>4 Guests, 2 Rooms</option>
-                    </select>
+                    <CustomSelect 
+                      value={hotelForm.guests} 
+                      onChange={(val) => setHotelForm({ ...hotelForm, guests: val })}
+                      options={[
+                        { value: 1, label: '1 Guest, 1 Room' },
+                        { value: 2, label: '2 Guests, 1 Room' },
+                        { value: 3, label: '3 Guests, 2 Rooms' },
+                        { value: 4, label: '4 Guests, 2 Rooms' },
+                        { value: 5, label: '5 Guests, 3 Rooms' },
+                        { value: 6, label: '6 Guests, 3 Rooms' },
+                      ]}
+                    />
                   </div>
                   <button type="submit" className="mega-submit-btn" disabled={isSearching}>
                     {isSearching ? <span className="loader-spin" /> : 'Search'}
@@ -324,7 +363,10 @@ export default function SearchPage() {
                   <div className="mega-input-divider" />
                   <div className="mega-input-cell flex-2">
                     <label>Travel Date</label>
-                    <input type="date" value={trainForm.date} onChange={e => setTrainForm({...trainForm, date: e.target.value})} required />
+                    <CustomDatePicker 
+                      value={trainForm.date} 
+                      onChange={(val) => setTrainForm({ ...trainForm, date: val })}
+                    />
                   </div>
                   <button type="submit" className="mega-submit-btn" disabled={isSearching}>
                     {isSearching ? <span className="loader-spin" /> : 'Search'}
@@ -376,7 +418,17 @@ export default function SearchPage() {
               </p>
             </motion.div>
           ) : hasSearched ? (
-            <motion.div key="results" className="search-results-wrapper" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <motion.div 
+              className="search-results-container"
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              {error && (
+                <div className="search-error-alert">
+                  <AlertCircle size={20} />
+                  <span>{error}</span>
+                </div>
+              )}
               
               <div className="results-sidebar">
                 <div className="filter-card">
@@ -398,16 +450,19 @@ export default function SearchPage() {
                     <input 
                       type="range" 
                       min="0" 
-                      max="10000" 
-                      step="100"
+                      max="1000000" 
+                      step="1000"
                       value={filters.maxPrice}
                       onChange={(e) => setFilters(prev => ({ ...prev, maxPrice: parseInt(e.target.value) }))}
                       style={{ width: '100%' }} 
                     />
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginTop: '4px' }}>
-                      <span>0</span><span>10,000+</span>
+                      <span>0</span><span>{formatCurrency(1000000, currency)}+</span>
                     </div>
                   </div>
+                  <Button variant="ghost" size="sm" onClick={() => setFilters({ stops: ['0', '1', '2+'], maxPrice: 1000000 })} style={{ width: '100%', marginTop: '16px' }}>
+                    Reset Filters
+                  </Button>
                 </div>
               </div>
 

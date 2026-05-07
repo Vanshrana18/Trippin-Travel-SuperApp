@@ -83,7 +83,7 @@ export default function Autocomplete({ value, onChange, placeholder, data, searc
               boxShadow: 'var(--shadow-xl)',
               maxHeight: '240px',
               overflowY: 'auto',
-              zIndex: 100
+              zIndex: 1001
             }}
           >
             {filteredData.slice(0, 10).map((item, index) => (

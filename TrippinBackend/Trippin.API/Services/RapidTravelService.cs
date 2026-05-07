@@ -40,7 +40,7 @@ public class RapidTravelService(HttpClient httpClient, IConfiguration config, IM
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(12);
             try
             {
-            var request = new HttpRequestMessage(HttpMethod.Get, $"https://booking-com15.p.rapidapi.com/api/v1/flights/searchFlights?fromId={from}.AIRPORT&toId={to}.AIRPORT&departDate={departDate:yyyy-MM-dd}&adults=1&sort=CHEAPEST&currencyCode={currency}");
+            var request = new HttpRequestMessage(HttpMethod.Get, $"https://booking-com15.p.rapidapi.com/api/v1/flights/searchFlights?fromId={from}.AIRPORT&toId={to}.AIRPORT&departDate={departDate:yyyy-MM-dd}&adults={adults}&sort=CHEAPEST&currencyCode={currency}");
             
             request.Headers.Add("X-RapidAPI-Key", _apiKey);
             request.Headers.Add("X-RapidAPI-Host", config["RapidAPI:FlightHost"]);
@@ -103,7 +103,7 @@ public class RapidTravelService(HttpClient httpClient, IConfiguration config, IM
             var (destId, destType) = await ResolveLocationAsync(query, ct);
 
             // Step 2: Search Hotels
-            var request = new HttpRequestMessage(HttpMethod.Get, $"https://booking-com15.p.rapidapi.com/api/v1/hotels/searchHotels?dest_id={destId}&search_type={destType}&arrival_date={checkIn:yyyy-MM-dd}&departure_date={checkOut:yyyy-MM-dd}&adults=1&children_age=0&room_qty=1&page_number=1&units=metric&temperature_unit=c&languagecode=en-us&currency_code={currency}");
+            var request = new HttpRequestMessage(HttpMethod.Get, $"https://booking-com15.p.rapidapi.com/api/v1/hotels/searchHotels?dest_id={destId}&search_type={destType}&arrival_date={checkIn:yyyy-MM-dd}&departure_date={checkOut:yyyy-MM-dd}&adults={adults}&children_age=0&room_qty=1&page_number=1&units=metric&temperature_unit=c&languagecode=en-us&currency_code={currency}");
             
             request.Headers.Add("X-RapidAPI-Key", _apiKey);
             request.Headers.Add("X-RapidAPI-Host", config["RapidAPI:HotelHost"]);

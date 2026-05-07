@@ -15,7 +15,8 @@ import ScrollReveal from '../components/animations/ScrollReveal';
 import AnimatedCounter from '../components/animations/AnimatedCounter';
 import MagneticButton from '../components/animations/MagneticButton';
 import StaggerContainer, { StaggerItem } from '../components/animations/StaggerContainer';
-import { motion } from 'framer-motion';
+import CustomDatePicker from '../components/shared/CustomDatePicker';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const STATUS_FILTERS = ['all', 'Planning', 'Active', 'Completed', 'Cancelled'];
 
@@ -197,9 +198,21 @@ export default function TripsPage() {
               <div style={{ marginTop: 'var(--space-4)' }}>
                 <Textarea label="Description" placeholder="What's this trip about?" value={createForm.description} onChange={(e) => setCreateForm(f => ({ ...f, description: e.target.value }))} rows={3} />
               </div>
-              <div className="form-row" style={{ marginTop: 'var(--space-4)' }}>
-                <Input label="Start Date *" type="date" value={createForm.startDate} onChange={(e) => setCreateForm(f => ({ ...f, startDate: e.target.value }))} />
-                <Input label="End Date *" type="date" value={createForm.endDate} onChange={(e) => setCreateForm(f => ({ ...f, endDate: e.target.value }))} />
+              <div className="form-row" style={{ marginTop: 'var(--space-4)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+                <div className="form-group">
+                  <label className="form-label" style={{ marginBottom: '8px', display: 'block' }}>Start Date *</label>
+                  <CustomDatePicker 
+                    value={createForm.startDate} 
+                    onChange={(val) => setCreateForm(f => ({ ...f, startDate: val }))} 
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label" style={{ marginBottom: '8px', display: 'block' }}>End Date *</label>
+                  <CustomDatePicker 
+                    value={createForm.endDate} 
+                    onChange={(val) => setCreateForm(f => ({ ...f, endDate: val }))} 
+                  />
+                </div>
               </div>
               <div className="form-row" style={{ marginTop: 'var(--space-4)' }}>
                 <Input label="Budget *" type="number" placeholder="5000" icon={DollarSign} value={createForm.budget} onChange={(e) => setCreateForm(f => ({ ...f, budget: e.target.value }))} />
