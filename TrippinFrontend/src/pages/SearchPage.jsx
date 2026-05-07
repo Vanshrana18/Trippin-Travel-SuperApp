@@ -1,7 +1,6 @@
-import { useState } from 'react';
-import { Search, Plane, Building, Train, Car, Calendar, Users, MapPin, ArrowRight, Star, ExternalLink, AlertCircle, Clock } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, Plane, Building, Train, Car, Calendar, Users, MapPin, ArrowRight, Star, ExternalLink, AlertCircle, Clock, ArrowLeftRight, Activity } from 'lucide-react';
 import Button from '../components/shared/Button';
-import Input from '../components/shared/Input';
 import ScrollReveal from '../components/animations/ScrollReveal';
 import Skeleton from '../components/shared/Skeleton';
 import StaggerContainer, { StaggerItem } from '../components/animations/StaggerContainer';
@@ -9,6 +8,20 @@ import { formatCurrency } from '../utils/formatters';
 import { useSearch } from '../hooks/useSearch';
 import { useCurrency } from '../contexts/CurrencyContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import Autocomplete from '../components/shared/Autocomplete';
+import { airports, stations } from '../data/autocompleteData';
+// Helper to get dynamic dates
+const getDates = () => {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tmwStr = tomorrow.toISOString().split('T')[0];
+  
+  const nextWeek = new Date();
+  nextWeek.setDate(nextWeek.getDate() + 4);
+  const nwStr = nextWeek.toISOString().split('T')[0];
+  
+  return { tmwStr, nwStr };
+};
 
 export default function SearchPage() {
   const { loading: isSearching, results, searchFlights, searchHotels, searchTrains, searchTaxis, error } = useSearch();
@@ -16,17 +29,41 @@ export default function SearchPage() {
   const [activeTab, setActiveTab] = useState('flights');
   const [hasSearched, setHasSearched] = useState(false);
   
-  // Flight Form State
-  const [flightForm, setFlightForm] = useState({ origin: 'DEL', destination: 'DXB', departDate: '2026-06-01', returnDate: '', passengers: 1 });
+  const { tmwStr, nwStr } = getDates();
 
-  // Hotel Form State
-  const [hotelForm, setHotelForm] = useState({ location: '20079110', checkIn: '2026-06-01', checkOut: '2026-06-05', guests: 2 });
+  // Dynamic Initial States
+  const [flightForm, setFlightForm] = useState({ origin: 'DEL', destination: 'JFK', departDate: tmwStr, returnDate: nwStr, passengers: 1 });
+  const [hotelForm, setHotelForm] = useState({ location: 'Paris', checkIn: tmwStr, checkOut: nwStr, guests: 2 });
+  const [trainForm, setTrainForm] = useState({ source: 'NDLS', destination: 'BCT', date: tmwStr });
+  const [taxiForm, setTaxiForm] = useState({ from: 'Paris Airport', to: 'Paris City Center', date: `${tmwStr}T10:00` });
 
-  // Train Form State
-  const [trainForm, setTrainForm] = useState({ source: 'NDLS', destination: 'BCT', date: '2026-06-01' });
+  // Filters State
+  const [filters, setFilters] = useState({
+    stops: ['0', '1', '2+'],
+    maxPrice: 5000
+  });
 
-  // Taxi Form State
-  const [taxiForm, setTaxiForm] = useState({ from: 'Paris Airport', to: 'Paris City Center', date: '2026-06-01 10:00:00' });
+  const toggleStopFilter = (stopValue) => {
+    setFilters(prev => ({
+      ...prev,
+      stops: prev.stops.includes(stopValue) 
+        ? prev.stops.filter(s => s !== stopValue) 
+        : [...prev.stops, stopValue]
+    }));
+  };
+
+  // Filtered Results
+  const filteredFlights = results.flights.filter(flight => {
+    const stopMatch = (flight.stops === 0 && filters.stops.includes('0')) ||
+                      (flight.stops === 1 && filters.stops.includes('1')) ||
+                      (flight.stops >= 2 && filters.stops.includes('2+'));
+    const priceMatch = flight.price <= filters.maxPrice;
+    return stopMatch && priceMatch;
+  });
+
+  const swapFlightDestinations = () => {
+    setFlightForm(prev => ({ ...prev, origin: prev.destination, destination: prev.origin }));
+  };
 
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -42,7 +79,7 @@ export default function SearchPage() {
       });
     } else if (activeTab === 'hotels') {
       await searchHotels({
-        cityCode: hotelForm.location.toUpperCase(),
+        cityCode: hotelForm.location,
         checkIn: hotelForm.checkIn,
         checkOut: hotelForm.checkOut,
         adults: hotelForm.guests,
@@ -65,159 +102,250 @@ export default function SearchPage() {
     }
   };
 
+  const renderLoader = () => (
+    <motion.div 
+      className="mega-search-loader"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+    >
+      <div className="loader-radar">
+        <Activity size={48} className="radar-icon" color="var(--primary)" />
+        <motion.div 
+          className="radar-sweep"
+          animate={{ rotate: 360 }}
+          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+        />
+      </div>
+      <h3>Scanning Global Providers...</h3>
+      <p>Comparing prices across hundreds of airlines and partners for the best rates.</p>
+    </motion.div>
+  );
+
   return (
     <div className="search-page">
-      <div className="search-hero">
-        {/* Animated Background Visuals */}
-        <div className="hero-visuals">
-          <motion.div 
-            className="orb orb-1"
+      <div className="search-hero mega-hero">
+        <div className="hero-visuals" style={{ overflow: 'hidden', position: 'absolute', inset: 0 }}>
+          <div className="hero-mesh" style={{ opacity: 0.8 }} />
+          <motion.div
             animate={{ 
-              y: [0, -30, 0],
-              x: [0, 20, 0],
-              scale: [1, 1.1, 1]
+              x: [0, 100, -50, 0], 
+              y: [0, -50, 100, 0],
+              scale: [1, 1.2, 0.8, 1] 
             }}
-            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+            style={{
+              position: 'absolute',
+              top: '20%',
+              left: '10%',
+              width: '400px',
+              height: '400px',
+              background: 'radial-gradient(circle, rgba(0, 188, 212, 0.15) 0%, transparent 70%)',
+              filter: 'blur(40px)',
+              borderRadius: '50%'
+            }}
           />
-          <motion.div 
-            className="orb orb-2"
+          <motion.div
             animate={{ 
-              y: [0, 40, 0],
-              x: [0, -30, 0],
-              scale: [1, 1.2, 1]
+              x: [0, -100, 50, 0], 
+              y: [0, 50, -100, 0],
+              scale: [1, 0.8, 1.2, 1] 
             }}
-            transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+            transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+            style={{
+              position: 'absolute',
+              bottom: '10%',
+              right: '20%',
+              width: '500px',
+              height: '500px',
+              background: 'radial-gradient(circle, rgba(255, 90, 31, 0.15) 0%, transparent 70%)',
+              filter: 'blur(60px)',
+              borderRadius: '50%'
+            }}
           />
-          <div className="hero-mesh" />
         </div>
 
-        <div className="container" style={{ position: 'relative', zIndex: 5 }}>
+        <div className="container" style={{ position: 'relative', zIndex: 5, paddingTop: '100px' }}>
           <ScrollReveal variant="blur">
-            <h1 className="hero-title">Live Search Engine</h1>
-            <p className="hero-subtitle">Compare flights, hotels, and taxis across hundreds of providers — find the best deals instantly.</p>
+            <h1 className="hero-title" style={{ fontSize: '3rem', textAlign: 'center', marginBottom: '8px' }}>Global Travel Engine</h1>
+            <p className="hero-subtitle" style={{ textAlign: 'center', maxWidth: '600px', margin: '0 auto 40px auto' }}>
+              Compare real-time prices across flights, hotels, and transit globally.
+            </p>
           </ScrollReveal>
         </div>
       </div>
 
-      <div className="container" style={{ marginTop: '-40px', position: 'relative', zIndex: 10 }}>
-        <div className="search-widget-container">
+      <div className="container" style={{ marginTop: '-80px', position: 'relative', zIndex: 10 }}>
+        <div className="mega-search-widget">
           {/* Tabs */}
-          <div className="search-tabs">
-            <button 
-              className={`search-tab ${activeTab === 'flights' ? 'active' : ''}`}
-              onClick={() => { setActiveTab('flights'); setHasSearched(false); }}
-            >
+          <div className="mega-search-tabs">
+            <button className={`mega-tab ${activeTab === 'flights' ? 'active' : ''}`} onClick={() => { setActiveTab('flights'); setHasSearched(false); }}>
               <Plane size={18} /> Flights
             </button>
-            <button 
-              className={`search-tab ${activeTab === 'hotels' ? 'active' : ''}`}
-              onClick={() => { setActiveTab('hotels'); setHasSearched(false); }}
-            >
+            <button className={`mega-tab ${activeTab === 'hotels' ? 'active' : ''}`} onClick={() => { setActiveTab('hotels'); setHasSearched(false); }}>
               <Building size={18} /> Hotels
             </button>
-            <button 
-              className={`search-tab ${activeTab === 'trains' ? 'active' : ''}`}
-              onClick={() => { setActiveTab('trains'); setHasSearched(false); }}
-            >
+            <button className={`mega-tab ${activeTab === 'trains' ? 'active' : ''}`} onClick={() => { setActiveTab('trains'); setHasSearched(false); }}>
               <Train size={18} /> Trains
             </button>
-            <button 
-              className={`search-tab ${activeTab === 'taxis' ? 'active' : ''}`}
-              onClick={() => { setActiveTab('taxis'); setHasSearched(false); }}
-            >
+            <button className={`mega-tab ${activeTab === 'taxis' ? 'active' : ''}`} onClick={() => { setActiveTab('taxis'); setHasSearched(false); }}>
               <Car size={18} /> Taxis
             </button>
           </div>
 
           {/* Forms */}
-          <div className="search-form-wrapper">
-              {activeTab === 'flights' ? (
-                <motion.form 
-                  key="flights"
-                  className="search-form"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  transition={{ duration: 0.2 }}
-                  onSubmit={handleSearch}
-                >
-                  <div className="search-form-grid">
-                    <Input label="Origin" icon={MapPin} placeholder="City or Airport" required value={flightForm.origin} onChange={e => setFlightForm({...flightForm, origin: e.target.value})} />
-                    <Input label="Destination" icon={MapPin} placeholder="City or Airport" required value={flightForm.destination} onChange={e => setFlightForm({...flightForm, destination: e.target.value})} />
-                    <Input label="Depart" type="date" icon={Calendar} required value={flightForm.departDate} onChange={e => setFlightForm({...flightForm, departDate: e.target.value})} />
-                    <Input label="Return" type="date" icon={Calendar} value={flightForm.returnDate} onChange={e => setFlightForm({...flightForm, returnDate: e.target.value})} />
-                    <Input label="Passengers" type="number" min="1" icon={Users} value={flightForm.passengers} onChange={e => setFlightForm({...flightForm, passengers: e.target.value})} />
+          <div className="mega-search-body">
+              {activeTab === 'flights' && (
+                <form className="mega-search-bar" onSubmit={handleSearch}>
+                  <div className="mega-input-group flight-route-group">
+                    <div className="mega-input-cell">
+                      <label>From</label>
+                      <Autocomplete
+                        value={flightForm.origin}
+                        onChange={(val) => setFlightForm({ ...flightForm, origin: val.toUpperCase() })}
+                        placeholder="e.g. New York or JFK"
+                        data={airports}
+                        searchKeys={['iata', 'name', 'city']}
+                        displayFormat={(item) => `${item.city} (${item.iata})`}
+                        valueFormat={(item) => item.iata}
+                      />
+                    </div>
+                    <button type="button" className="mega-swap-btn" onClick={swapFlightDestinations}>
+                      <ArrowLeftRight size={16} />
+                    </button>
+                    <div className="mega-input-cell">
+                      <label>To</label>
+                      <Autocomplete
+                        value={flightForm.destination}
+                        onChange={(val) => setFlightForm({ ...flightForm, destination: val.toUpperCase() })}
+                        placeholder="e.g. London or LHR"
+                        data={airports}
+                        searchKeys={['iata', 'name', 'city']}
+                        displayFormat={(item) => `${item.city} (${item.iata})`}
+                        valueFormat={(item) => item.iata}
+                      />
+                    </div>
                   </div>
-                  <div className="search-form-actions">
-                    <Button variant="primary" size="lg" type="submit" loading={isSearching} style={{ width: '100%', maxWidth: '300px' }}>
-                      <Search size={18} /> Search Flights
-                    </Button>
+                  <div className="mega-input-divider" />
+                  <div className="mega-input-cell">
+                    <label>Depart</label>
+                    <input type="date" value={flightForm.departDate} onChange={e => setFlightForm({...flightForm, departDate: e.target.value})} required />
                   </div>
-                </motion.form>
-              ) : activeTab === 'hotels' ? (
-                <motion.form 
-                  key="hotels"
-                  className="search-form"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  transition={{ duration: 0.2 }}
-                  onSubmit={handleSearch}
-                >
-                  <div className="search-form-grid hotel-grid">
-                    <Input label="Destination" icon={MapPin} placeholder="City or Point of Interest" required value={hotelForm.location} onChange={e => setHotelForm({...hotelForm, location: e.target.value})} />
-                    <Input label="Check In" type="date" icon={Calendar} required value={hotelForm.checkIn} onChange={e => setHotelForm({...hotelForm, checkIn: e.target.value})} />
-                    <Input label="Check Out" type="date" icon={Calendar} required value={hotelForm.checkOut} onChange={e => setHotelForm({...hotelForm, checkOut: e.target.value})} />
-                    <Input label="Guests" type="number" min="1" icon={Users} value={hotelForm.guests} onChange={e => setHotelForm({...hotelForm, guests: e.target.value})} />
+                  <div className="mega-input-divider" />
+                  <div className="mega-input-cell">
+                    <label>Return</label>
+                    <input type="date" value={flightForm.returnDate} onChange={e => setFlightForm({...flightForm, returnDate: e.target.value})} />
                   </div>
-                  <div className="search-form-actions">
-                    <Button variant="primary" size="lg" type="submit" loading={isSearching} style={{ width: '100%', maxWidth: '300px' }}>
-                      <Search size={18} /> Search Hotels
-                    </Button>
+                  <div className="mega-input-divider" />
+                  <div className="mega-input-cell">
+                    <label>Travellers</label>
+                    <select value={flightForm.passengers} onChange={e => setFlightForm({...flightForm, passengers: parseInt(e.target.value)})}>
+                      <option value={1}>1 Adult, Economy</option>
+                      <option value={2}>2 Adults, Economy</option>
+                      <option value={3}>3 Adults, Economy</option>
+                      <option value={4}>4 Adults, Economy</option>
+                    </select>
                   </div>
-                </motion.form>
-              ) : activeTab === 'trains' ? (
-                <motion.form 
-                  key="trains"
-                  className="search-form"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  transition={{ duration: 0.2 }}
-                  onSubmit={handleSearch}
-                >
-                  <div className="search-form-grid hotel-grid">
-                    <Input label="From Station" icon={MapPin} placeholder="Source Station" required value={trainForm.source} onChange={e => setTrainForm({...trainForm, source: e.target.value})} />
-                    <Input label="To Station" icon={MapPin} placeholder="Destination Station" required value={trainForm.destination} onChange={e => setTrainForm({...trainForm, destination: e.target.value})} />
-                    <Input label="Travel Date" type="date" icon={Calendar} required value={trainForm.date} onChange={e => setTrainForm({...trainForm, date: e.target.value})} />
+                  <button type="submit" className="mega-submit-btn" disabled={isSearching}>
+                    {isSearching ? <span className="loader-spin" /> : 'Search'}
+                  </button>
+                </form>
+              )}
+
+              {activeTab === 'hotels' && (
+                <form className="mega-search-bar" onSubmit={handleSearch}>
+                  <div className="mega-input-cell flex-2">
+                    <label>Where to?</label>
+                    <input type="text" placeholder="City or Property Name (e.g. Paris)" value={hotelForm.location} onChange={e => setHotelForm({...hotelForm, location: e.target.value})} required />
                   </div>
-                  <div className="search-form-actions">
-                    <Button variant="primary" size="lg" type="submit" loading={isSearching} style={{ width: '100%', maxWidth: '300px' }}>
-                      <Search size={18} /> Search Trains
-                    </Button>
+                  <div className="mega-input-divider" />
+                  <div className="mega-input-cell">
+                    <label>Check In</label>
+                    <input type="date" value={hotelForm.checkIn} onChange={e => setHotelForm({...hotelForm, checkIn: e.target.value})} required />
                   </div>
-                </motion.form>
-              ) : (
-                <motion.form 
-                  key="taxis"
-                  className="search-form"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  transition={{ duration: 0.2 }}
-                  onSubmit={handleSearch}
-                >
-                  <div className="search-form-grid hotel-grid">
-                    <Input label="Pickup" icon={MapPin} placeholder="Pickup Location" required value={taxiForm.from} onChange={e => setTaxiForm({...taxiForm, from: e.target.value})} />
-                    <Input label="Drop-off" icon={MapPin} placeholder="Drop-off Location" required value={taxiForm.to} onChange={e => setTaxiForm({...taxiForm, to: e.target.value})} />
-                    <Input label="Pickup Time" type="datetime-local" icon={Calendar} required value={taxiForm.date} onChange={e => setTaxiForm({...taxiForm, date: e.target.value})} />
+                  <div className="mega-input-divider" />
+                  <div className="mega-input-cell">
+                    <label>Check Out</label>
+                    <input type="date" value={hotelForm.checkOut} onChange={e => setHotelForm({...hotelForm, checkOut: e.target.value})} required />
                   </div>
-                  <div className="search-form-actions">
-                    <Button variant="primary" size="lg" type="submit" loading={isSearching} style={{ width: '100%', maxWidth: '300px' }}>
-                      <Search size={18} /> Search Taxis
-                    </Button>
+                  <div className="mega-input-divider" />
+                  <div className="mega-input-cell">
+                    <label>Guests</label>
+                    <select value={hotelForm.guests} onChange={e => setHotelForm({...hotelForm, guests: parseInt(e.target.value)})}>
+                      <option value={1}>1 Guest, 1 Room</option>
+                      <option value={2}>2 Guests, 1 Room</option>
+                      <option value={3}>3 Guests, 2 Rooms</option>
+                      <option value={4}>4 Guests, 2 Rooms</option>
+                    </select>
                   </div>
-                </motion.form>
+                  <button type="submit" className="mega-submit-btn" disabled={isSearching}>
+                    {isSearching ? <span className="loader-spin" /> : 'Search'}
+                  </button>
+                </form>
+              )}
+
+              {activeTab === 'trains' && (
+                <form className="mega-search-bar" onSubmit={handleSearch}>
+                  <div className="mega-input-group flight-route-group">
+                    <div className="mega-input-cell">
+                      <label>From (Station)</label>
+                      <Autocomplete
+                        value={trainForm.source}
+                        onChange={(val) => setTrainForm({ ...trainForm, source: val.toUpperCase() })}
+                        placeholder="e.g. Delhi or NDLS"
+                        data={stations}
+                        searchKeys={['code', 'name', 'city']}
+                        displayFormat={(item) => `${item.name} (${item.code})`}
+                        valueFormat={(item) => item.code}
+                      />
+                    </div>
+                    <div className="mega-input-divider" />
+                    <div className="mega-input-cell">
+                      <label>To (Station)</label>
+                      <Autocomplete
+                        value={trainForm.destination}
+                        onChange={(val) => setTrainForm({ ...trainForm, destination: val.toUpperCase() })}
+                        placeholder="e.g. Mumbai or BCT"
+                        data={stations}
+                        searchKeys={['code', 'name', 'city']}
+                        displayFormat={(item) => `${item.name} (${item.code})`}
+                        valueFormat={(item) => item.code}
+                      />
+                    </div>
+                  </div>
+                  <div className="mega-input-divider" />
+                  <div className="mega-input-cell flex-2">
+                    <label>Travel Date</label>
+                    <input type="date" value={trainForm.date} onChange={e => setTrainForm({...trainForm, date: e.target.value})} required />
+                  </div>
+                  <button type="submit" className="mega-submit-btn" disabled={isSearching}>
+                    {isSearching ? <span className="loader-spin" /> : 'Search'}
+                  </button>
+                </form>
+              )}
+
+              {activeTab === 'taxis' && (
+                <form className="mega-search-bar" onSubmit={handleSearch}>
+                  <div className="mega-input-group flight-route-group">
+                    <div className="mega-input-cell">
+                      <label>Pickup Location</label>
+                      <input type="text" placeholder="e.g. Airport" value={taxiForm.from} onChange={e => setTaxiForm({...taxiForm, from: e.target.value})} required />
+                    </div>
+                    <div className="mega-input-divider" />
+                    <div className="mega-input-cell">
+                      <label>Drop-off Location</label>
+                      <input type="text" placeholder="e.g. City Center" value={taxiForm.to} onChange={e => setTaxiForm({...taxiForm, to: e.target.value})} required />
+                    </div>
+                  </div>
+                  <div className="mega-input-divider" />
+                  <div className="mega-input-cell flex-2">
+                    <label>Pickup Date & Time</label>
+                    <input type="datetime-local" value={taxiForm.date} onChange={e => setTaxiForm({...taxiForm, date: e.target.value})} required />
+                  </div>
+                  <button type="submit" className="mega-submit-btn" disabled={isSearching}>
+                    {isSearching ? <span className="loader-spin" /> : 'Search'}
+                  </button>
+                </form>
               )}
           </div>
         </div>
@@ -225,176 +353,245 @@ export default function SearchPage() {
 
       {/* Results Section */}
       <div className="container" style={{ marginTop: 'var(--space-12)', paddingBottom: 'var(--space-16)' }}>
-        {isSearching ? (
-          <div className="search-results-grid">
-            <Skeleton variant="card" height={160} />
-            <Skeleton variant="card" height={160} />
-            <Skeleton variant="card" height={160} />
-          </div>
-        ) : error ? (
-          <div className="search-error-state">
-            <AlertCircle size={48} color="var(--danger)" />
-            <h3>Search Failed</h3>
-            <p style={{ color: 'var(--danger)', fontWeight: 500 }}>{error}</p>
-            <p className="text-sm mt-2">
-              Tip: The API requires future dates (Today is May 2, 2026). <br/>
-              Current search dates in your form might be in the past.
-            </p>
-          </div>
-        ) : hasSearched ? (
-          activeTab === 'flights' ? (
-            <StaggerContainer className="search-results-list" staggerDelay={0.1}>
-              <div className="results-header">
-                <h2>Flight Results</h2>
-                <p>Found {results.flights.length} flights from {flightForm.origin || 'Origin'} to {flightForm.destination || 'Destination'}.</p>
-              </div>
-              {results.flights.map((flight, idx) => (
-                <StaggerItem key={idx}>
-                  <div className="search-result-card flight-card">
-                    <div className="flight-airline">
-                      <div className="airline-logo"><Plane size={20} /></div>
-                      <div>
-                        <div className="airline-name">{flight.airline}</div>
-                        <div className="flight-number">{flight.flightNumber}</div>
-                      </div>
-                    </div>
-                    <div className="flight-route">
-                      <div className="flight-time-col text-right">
-                        <div className="flight-time">{new Date(flight.departureTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                        <div className="flight-airport">{flight.origin}</div>
-                      </div>
-                      <div className="flight-path">
-                        <span className="flight-duration">{flight.duration.replace('PT', '').toLowerCase()}</span>
-                        <div className="flight-line"><ArrowRight size={16} /></div>
-                        <span className="flight-type">{flight.stops === 0 ? 'Non-stop' : `${flight.stops} Stop${flight.stops > 1 ? 's' : ''}`}</span>
-                      </div>
-                      <div className="flight-time-col">
-                        <div className="flight-time">{new Date(flight.arrivalTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                        <div className="flight-airport">{flight.destination}</div>
-                      </div>
-                    </div>
-                    <div className="flight-price-col">
-                      <div className="flight-price">{formatCurrency(flight.price, flight.currency)}</div>
-                      <Button variant="outline" size="sm" onClick={() => window.open(flight.bookingUrl, '_blank')}>
-                        <ExternalLink size={14} /> Book
-                      </Button>
+        <AnimatePresence mode="wait">
+          {isSearching ? (
+            <motion.div key="loader" className="search-results-wrapper">
+              {renderLoader()}
+            </motion.div>
+          ) : error ? (
+            <motion.div key="error" className="search-error-state" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <AlertCircle size={48} color="var(--danger)" />
+              <h3>Search Encountered an Error</h3>
+              <p style={{ color: 'var(--danger)', fontWeight: 500 }}>{error}</p>
+              <p className="text-sm mt-2">
+                Ensure you are using valid IATA codes for flights (e.g., JFK) or Station Codes for trains.
+              </p>
+            </motion.div>
+          ) : hasSearched ? (
+            <motion.div key="results" className="search-results-wrapper" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              
+              <div className="results-sidebar">
+                <div className="filter-card">
+                  <h3>Filters</h3>
+                  <div className="filter-group">
+                    <h4>Stops</h4>
+                    <label>
+                      <input type="checkbox" checked={filters.stops.includes('0')} onChange={() => toggleStopFilter('0')} /> Non-stop
+                    </label>
+                    <label>
+                      <input type="checkbox" checked={filters.stops.includes('1')} onChange={() => toggleStopFilter('1')} /> 1 Stop
+                    </label>
+                    <label>
+                      <input type="checkbox" checked={filters.stops.includes('2+')} onChange={() => toggleStopFilter('2+')} /> 2+ Stops
+                    </label>
+                  </div>
+                  <div className="filter-group">
+                    <h4>Max Price: {formatCurrency(filters.maxPrice, currency)}</h4>
+                    <input 
+                      type="range" 
+                      min="0" 
+                      max="10000" 
+                      step="100"
+                      value={filters.maxPrice}
+                      onChange={(e) => setFilters(prev => ({ ...prev, maxPrice: parseInt(e.target.value) }))}
+                      style={{ width: '100%' }} 
+                    />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginTop: '4px' }}>
+                      <span>0</span><span>10,000+</span>
                     </div>
                   </div>
-                </StaggerItem>
-              ))}
-            </StaggerContainer>
-          ) : activeTab === 'hotels' ? (
-            <StaggerContainer className="search-results-grid hotels-grid" staggerDelay={0.1}>
-              <div className="results-header" style={{ gridColumn: '1 / -1' }}>
-                <h2>Hotel Results</h2>
-                <p>Found {results.hotels.length} hotels in {hotelForm.location || 'your destination'}.</p>
+                </div>
               </div>
-              {results.hotels.map((hotel, idx) => (
-                <StaggerItem key={idx}>
-                  <div className="search-result-card hotel-card-vertical">
-                    <div className="hotel-image">
-                      <img 
-                        src={hotel.imageUrl || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=300&fit=crop'} 
-                        alt={hotel.name} 
-                        loading="lazy" 
-                        onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=300&fit=crop'; }}
-                      />
+
+              <div className="results-main">
+                {activeTab === 'flights' && (
+                  <>
+                    <div className="results-header-modern">
+                      <h2>{filteredFlights.length} Flights Found</h2>
+                      <div className="sort-by">Sort by: <strong>Cheapest First</strong></div>
                     </div>
-                    <div className="hotel-info">
-                      <h3 className="hotel-name">{hotel.name}</h3>
-                      <div className="hotel-rating">
-                        <Star size={14} fill="var(--warning)" color="var(--warning)" /> {hotel.rating || 4.0} <span className="rating-label">(Verified)</span>
+                    {filteredFlights.length === 0 ? (
+                      <div className="empty-results-state">
+                        <Plane size={48} opacity={0.5} />
+                        <h3>No flights found</h3>
+                        <p>We couldn't find any flights matching your filters.</p>
                       </div>
-                      <div className="hotel-amenities">
-                        <span className="amenity-tag">Free WiFi</span>
-                        <span className="amenity-tag">Air Conditioning</span>
-                      </div>
-                      <div className="hotel-bottom">
-                        <div className="price-box">
-                          <span className="hotel-price">{formatCurrency(hotel.pricePerNight, hotel.currency)}</span>
-                          <span className="hotel-price-label">/ night</span>
-                        </div>
-                        <Button variant="primary" size="sm" onClick={() => window.open(hotel.bookingUrl, '_blank')}>
-                          Book Now
-                        </Button>
-                      </div>
+                    ) : (
+                      <StaggerContainer className="search-results-list" staggerDelay={0.05}>
+                        {filteredFlights.map((flight, idx) => (
+                          <StaggerItem key={idx}>
+                            <div className="search-result-card flight-card-modern">
+                              <div className="flight-airline-box">
+                                <img src={`https://pics.avs.io/80/40/${flight.airline.substring(0, 2).toUpperCase()}.png`} alt={flight.airline} onError={(e) => { e.target.style.display='none'; e.target.nextSibling.style.display='block'; }} className="airline-logo-img" />
+                                <Plane size={24} className="airline-logo-fallback" style={{ display: 'none', color: 'var(--ocean-400)' }} />
+                                <div className="airline-details">
+                                  <span className="airline-name">{flight.airline}</span>
+                                  <span className="flight-number">{flight.flightNumber}</span>
+                                </div>
+                              </div>
+                              <div className="flight-timeline-box">
+                                <div className="time-point text-right">
+                                  <strong>{new Date(flight.departureTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong>
+                                  <span>{flight.origin}</span>
+                                </div>
+                                <div className="flight-path-viz">
+                                  <span className="duration-label">{flight.duration}</span>
+                                  <div className="path-line">
+                                    {flight.stops > 0 && <span className="stop-dot"></span>}
+                                  </div>
+                                  <span className="stops-label">{flight.stops === 0 ? 'Direct' : `${flight.stops} Stop${flight.stops > 1 ? 's' : ''}`}</span>
+                                </div>
+                                <div className="time-point">
+                                  <strong>{new Date(flight.arrivalTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong>
+                                  <span>{flight.destination}</span>
+                                </div>
+                              </div>
+                              <div className="flight-action-box">
+                                <div className="flight-price-huge">{formatCurrency(flight.price, flight.currency)}</div>
+                                <Button variant="primary" size="lg" onClick={() => window.open(flight.bookingUrl || '#', '_blank')}>Book</Button>
+                              </div>
+                            </div>
+                          </StaggerItem>
+                        ))}
+                      </StaggerContainer>
+                    )}
+                  </>
+                )}
+
+                {activeTab === 'hotels' && (
+                  <>
+                    <div className="results-header-modern">
+                      <h2>{results.hotels.length} Properties in {hotelForm.location}</h2>
+                      <div className="sort-by">Sort by: <strong>Recommended</strong></div>
                     </div>
-                  </div>
-                </StaggerItem>
-              ))}
-            </StaggerContainer>
-          ) : activeTab === 'trains' ? (
-            <StaggerContainer className="search-results-list" staggerDelay={0.1}>
-              <div className="results-header">
-                <h2>Train Results</h2>
-                <p>Found {results.trains.length} trains from {trainForm.source} to {trainForm.destination}.</p>
+                    {results.hotels.length === 0 ? (
+                      <div className="empty-results-state">
+                        <Building size={48} opacity={0.5} />
+                        <h3>No hotels found</h3>
+                        <p>Try adjusting your search criteria or dates.</p>
+                      </div>
+                    ) : (
+                      <StaggerContainer className="search-results-list" staggerDelay={0.05}>
+                        {results.hotels.map((hotel, idx) => (
+                          <StaggerItem key={idx}>
+                            <div className="search-result-card hotel-card-modern">
+                              <div className="hotel-card-image" style={{ backgroundImage: `url(${hotel.imageUrl || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=300&fit=crop'})` }}>
+                                {hotel.rating && <div className="floating-rating"><Star size={12} fill="#fff" /> {hotel.rating}</div>}
+                              </div>
+                              <div className="hotel-card-content">
+                                <div className="hotel-main-info">
+                                  <h3>{hotel.name}</h3>
+                                  <p className="hotel-address"><MapPin size={12} /> {hotel.address || hotelForm.location}</p>
+                                  <div className="hotel-stars">
+                                    {[...Array(hotel.starRating || 4)].map((_, i) => <Star key={i} size={14} fill="var(--warning)" color="var(--warning)" />)}
+                                  </div>
+                                </div>
+                                <div className="hotel-card-price-action">
+                                  <div className="price-block">
+                                    <span className="price-val">{formatCurrency(hotel.pricePerNight, hotel.currency)}</span>
+                                    <span className="price-lbl">/ night</span>
+                                  </div>
+                                  <Button variant="primary" onClick={() => window.open(hotel.bookingUrl || '#', '_blank')}>View Rooms</Button>
+                                </div>
+                              </div>
+                            </div>
+                          </StaggerItem>
+                        ))}
+                      </StaggerContainer>
+                    )}
+                  </>
+                )}
+
+                {activeTab === 'trains' && (
+                  <>
+                    <div className="results-header-modern">
+                      <h2>{results.trains.length} Trains Found</h2>
+                    </div>
+                    {results.trains.length === 0 ? (
+                      <div className="empty-results-state">
+                        <Train size={48} opacity={0.5} />
+                        <h3>No trains found</h3>
+                        <p>Check the station codes (e.g., NDLS) and try again.</p>
+                      </div>
+                    ) : (
+                      <StaggerContainer className="search-results-list" staggerDelay={0.05}>
+                        {results.trains.map((train, idx) => (
+                          <StaggerItem key={idx}>
+                            <div className="search-result-card flight-card-modern">
+                              <div className="flight-airline-box">
+                                <Train size={32} color="var(--ocean-400)" />
+                                <div className="airline-details">
+                                  <span className="airline-name">{train.trainName}</span>
+                                  <span className="flight-number">#{train.trainNumber}</span>
+                                </div>
+                              </div>
+                              <div className="flight-timeline-box">
+                                <div className="time-point text-right">
+                                  <strong>{train.departureTime}</strong>
+                                  <span>{train.departureStation}</span>
+                                </div>
+                                <div className="flight-path-viz">
+                                  <span className="duration-label">{train.duration}</span>
+                                  <div className="path-line"></div>
+                                  <span className="stops-label">Class: {train.class}</span>
+                                </div>
+                                <div className="time-point">
+                                  <strong>{train.arrivalTime}</strong>
+                                  <span>{train.arrivalStation}</span>
+                                </div>
+                              </div>
+                              <div className="flight-action-box">
+                                <div className="flight-price-huge">{formatCurrency(train.price, train.currency)}</div>
+                                <Button variant="primary" size="lg">Book</Button>
+                              </div>
+                            </div>
+                          </StaggerItem>
+                        ))}
+                      </StaggerContainer>
+                    )}
+                  </>
+                )}
+
+                {activeTab === 'taxis' && (
+                  <>
+                    <div className="results-header-modern">
+                      <h2>{results.taxis.length} Taxis Available</h2>
+                    </div>
+                    {results.taxis.length === 0 ? (
+                      <div className="empty-results-state">
+                        <Car size={48} opacity={0.5} />
+                        <h3>No taxis found</h3>
+                        <p>We couldn't locate any available rides for this route.</p>
+                      </div>
+                    ) : (
+                      <StaggerContainer className="search-results-grid" staggerDelay={0.05}>
+                        {results.taxis.map((taxi, idx) => (
+                          <StaggerItem key={idx}>
+                            <div className="search-result-card taxi-card-modern">
+                              <div className="taxi-img-wrapper">
+                                <Car size={40} color="var(--primary)" />
+                              </div>
+                              <div className="taxi-meta">
+                                <h3>{taxi.company}</h3>
+                                <span className="car-type">{taxi.carType}</span>
+                                <div className="taxi-time"><Clock size={14} /> Est: {taxi.estimatedTime}</div>
+                              </div>
+                              <div className="taxi-action">
+                                <div className="taxi-price">{formatCurrency(taxi.price, taxi.currency)}</div>
+                                <Button variant="primary">Reserve</Button>
+                              </div>
+                            </div>
+                          </StaggerItem>
+                        ))}
+                      </StaggerContainer>
+                    )}
+                  </>
+                )}
               </div>
-              {results.trains.map((train, idx) => (
-                <StaggerItem key={idx}>
-                  <div className="search-result-card flight-card">
-                    <div className="flight-airline">
-                      <div className="airline-logo"><Train size={20} /></div>
-                      <div>
-                        <div className="airline-name">{train.trainName}</div>
-                        <div className="flight-number">#{train.trainNumber}</div>
-                      </div>
-                    </div>
-                    <div className="flight-route">
-                      <div className="flight-time-col text-right">
-                        <div className="flight-time">{train.departureTime}</div>
-                        <div className="flight-airport">{train.departureStation}</div>
-                      </div>
-                      <div className="flight-path">
-                        <span className="flight-duration">{train.duration}</span>
-                        <div className="flight-line"><ArrowRight size={16} /></div>
-                        <span className="flight-type">{train.class}</span>
-                      </div>
-                      <div className="flight-time-col">
-                        <div className="flight-time">{train.arrivalTime}</div>
-                        <div className="flight-airport">{train.arrivalStation}</div>
-                      </div>
-                    </div>
-                    <div className="flight-price-col">
-                      <div className="flight-price">{formatCurrency(train.price, train.currency)}</div>
-                      <Button variant="outline" size="sm">
-                        Details
-                      </Button>
-                    </div>
-                  </div>
-                </StaggerItem>
-              ))}
-            </StaggerContainer>
-          ) : (
-            <StaggerContainer className="search-results-grid" staggerDelay={0.1}>
-              <div className="results-header" style={{ gridColumn: '1 / -1' }}>
-                <h2>Taxi Results</h2>
-                <p>Found {results.taxis.length} available taxis from {taxiForm.from} to {taxiForm.to}.</p>
-              </div>
-              {results.taxis.map((taxi, idx) => (
-                <StaggerItem key={idx}>
-                  <div className="search-result-card taxi-card-alt">
-                    <div className="taxi-icon-box">
-                      <Car size={32} />
-                    </div>
-                    <div className="taxi-details">
-                      <div className="taxi-header">
-                        <h3>{taxi.company}</h3>
-                        <span className="taxi-type">{taxi.carType}</span>
-                      </div>
-                      <div className="taxi-meta">
-                        <span><Clock size={14} /> {taxi.estimatedTime}</span>
-                        <span className="taxi-price">{formatCurrency(taxi.price, taxi.currency)}</span>
-                      </div>
-                      <Button variant="primary" size="sm" style={{ marginTop: '12px', width: '100%' }}>
-                        Book Now
-                      </Button>
-                    </div>
-                  </div>
-                </StaggerItem>
-              ))}
-            </StaggerContainer>
-          )
-        ) : null}
+
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
       </div>
     </div>
   );

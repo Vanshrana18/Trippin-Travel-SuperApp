@@ -1,17 +1,24 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useDestinations } from '../hooks/useDestinations';
-import { Search, X, SlidersHorizontal } from 'lucide-react';
+import { useDestinations, useTrendingDestinations } from '../hooks/useDestinations';
+import { Search, X, SlidersHorizontal, TrendingUp } from 'lucide-react';
 import DestinationCard from '../components/shared/DestinationCard';
 import Skeleton from '../components/shared/Skeleton';
 import EmptyState from '../components/shared/EmptyState';
 import Button from '../components/shared/Button';
 import ScrollReveal from '../components/animations/ScrollReveal';
-import Tilt3D from '../components/animations/Tilt3D';
 import StaggerContainer, { StaggerItem } from '../components/animations/StaggerContainer';
 import { motion } from 'framer-motion';
 
-const CATEGORIES = ['all', 'beach', 'mountains', 'city', 'cultural', 'adventure'];
+const CATEGORIES = [
+  { id: 'all', label: 'All', icon: '🌍' },
+  { id: 'beach', label: 'Beach', icon: '🏖️' },
+  { id: 'mountains', label: 'Mountains', icon: '⛰️' },
+  { id: 'city', label: 'City', icon: '🏙️' },
+  { id: 'cultural', label: 'Cultural', icon: '🏛️' },
+  { id: 'adventure', label: 'Adventure', icon: '🧗' },
+  { id: 'nature', label: 'Nature', icon: '🌲' }
+];
 
 export default function DiscoverPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -29,6 +36,9 @@ export default function DiscoverPage() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
+  // Main search query — only fires when user has a search or category filter
+  const isFiltering = !!(debouncedSearch || category !== 'all');
+
   const { data, isLoading } = useDestinations({
     search: debouncedSearch || undefined,
     category: category !== 'all' ? category : undefined,
@@ -37,9 +47,19 @@ export default function DiscoverPage() {
     pageSize: 12,
   });
 
+  // Trending query — fires when no filter is active to populate the default view
+  const { data: trendingData, isLoading: trendingLoading } = useTrendingDestinations(12);
+
   const destinations = Array.isArray(data) ? data : data?.items || data?.data || data?.$values || [];
   const totalPages = data?.totalPages || 1;
   const totalCount = data?.totalCount || destinations.length;
+
+  const trendingList = Array.isArray(trendingData) ? trendingData : trendingData?.$values || [];
+
+  // Decide what to show: if user is searching/filtering, show search results. Otherwise, show trending.
+  const displayDestinations = isFiltering ? destinations : trendingList;
+  const showLoading = isFiltering ? isLoading : trendingLoading;
+  const showPagination = isFiltering && totalPages > 1;
 
   const handleCategoryChange = (cat) => {
     setCategory(cat);
@@ -61,7 +81,6 @@ export default function DiscoverPage() {
         <ScrollReveal variant="blur">
           <div className="discover-header">
             <h1 className="discover-title">Discover Destinations</h1>
-            <p className="discover-subtitle">Explore our curated collection of the world's most incredible places.</p>
           </div>
         </ScrollReveal>
 
@@ -74,7 +93,7 @@ export default function DiscoverPage() {
                 <input
                   className="form-input"
                   type="text"
-                  placeholder="Search destinations, cities, countries..."
+                  placeholder="Search any city, country, or landmark worldwide..."
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   id="destination-search"
@@ -98,16 +117,17 @@ export default function DiscoverPage() {
             <div className="discover-categories">
               {CATEGORIES.map((cat, i) => (
                 <motion.button
-                  key={cat}
-                  className={`category-pill ${category === cat ? 'active' : ''}`}
-                  onClick={() => handleCategoryChange(cat)}
+                  key={cat.id}
+                  className={`category-pill-premium ${category === cat.id ? 'active' : ''}`}
+                  onClick={() => handleCategoryChange(cat.id)}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 + i * 0.05, duration: 0.4 }}
-                  whileHover={{ scale: 1.08, y: -2 }}
+                  whileHover={{ scale: 1.05, y: -2 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  {cat === 'all' ? 'All' : cat}
+                  <span className="cat-icon">{cat.icon}</span>
+                  <span>{cat.label}</span>
                 </motion.button>
               ))}
             </div>
@@ -122,34 +142,45 @@ export default function DiscoverPage() {
           transition={{ delay: 0.3 }}
         >
           <div className="discover-count">
-            {isLoading ? 'Searching...' : `${totalCount} destination${totalCount !== 1 ? 's' : ''} found`}
+            {showLoading ? 'Searching...' : isFiltering ? (
+              `${totalCount} destination${totalCount !== 1 ? 's' : ''} found`
+            ) : (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <TrendingUp size={14} style={{ color: 'var(--terra-400)' }} />
+                Trending Now — refreshes every 30 min
+              </span>
+            )}
           </div>
-          <div className="discover-sort">
-            <SlidersHorizontal size={14} style={{ color: 'var(--ink-muted)' }} />
-            <label htmlFor="sort-select">Sort by</label>
-            <select id="sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-              <option value="name">Name</option>
-              <option value="cost_asc">Cost: Low → High</option>
-              <option value="cost_desc">Cost: High → Low</option>
-              <option value="popularity">Popularity</option>
-              <option value="rating">Rating</option>
-            </select>
-          </div>
+          {isFiltering && (
+            <div className="discover-sort">
+              <SlidersHorizontal size={14} style={{ color: 'var(--ink-muted)' }} />
+              <label htmlFor="sort-select">Sort by</label>
+              <select id="sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                <option value="name">Name</option>
+                <option value="cost_asc">Cost: Low → High</option>
+                <option value="cost_desc">Cost: High → Low</option>
+                <option value="popularity">Popularity</option>
+                <option value="rating">Rating</option>
+              </select>
+            </div>
+          )}
         </motion.div>
 
         {/* Results */}
-        {isLoading ? (
+        {showLoading ? (
           <div className="destinations-grid">
             {[...Array(8)].map((_, i) => (
               <Skeleton key={i} variant="card" />
             ))}
           </div>
-        ) : destinations.length === 0 ? (
+        ) : displayDestinations.length === 0 ? (
           <ScrollReveal variant="scaleUp">
             <EmptyState
               icon={Search}
               title="No destinations found"
-              description="Try adjusting your filters or search terms."
+              description={isFiltering
+                ? "No results in our database — try a different spelling or search for a city/country name."
+                : "Something went wrong loading trending destinations."}
               action={
                 <Button variant="secondary" onClick={() => { clearSearch(); setCategory('all'); }}>
                   Clear Filters
@@ -160,16 +191,16 @@ export default function DiscoverPage() {
         ) : (
           <>
             <StaggerContainer className="destinations-grid" staggerDelay={0.08}>
-              {destinations.map((dest, index) => (
+              {displayDestinations.map((dest, index) => (
                 <StaggerItem key={dest.id}>
-                  <Tilt3D intensity={7} scale={1.02} glare style={{ borderRadius: 'var(--radius-lg)' }}>
+                  <motion.div whileHover={{ y: -4, scale: 1.01 }}>
                     <DestinationCard destination={dest} index={index} />
-                  </Tilt3D>
+                  </motion.div>
                 </StaggerItem>
               ))}
             </StaggerContainer>
 
-            {totalPages > 1 && (
+            {showPagination && (
               <motion.div
                 className="pagination"
                 initial={{ opacity: 0, y: 20 }}

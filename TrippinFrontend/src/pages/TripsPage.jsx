@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useTrips, useCreateTrip } from '../hooks/useTrips';
-import { Map, Plus, Calendar, DollarSign, Users, Plane, Globe } from 'lucide-react';
+import { useTrips, useCreateTrip, useDeleteTrip } from '../hooks/useTrips';
+import { Map, Plus, Calendar, DollarSign, Users, Plane, Globe, Trash2 } from 'lucide-react';
 import Button from '../components/shared/Button';
 import Modal from '../components/shared/Modal';
 import Input from '../components/shared/Input';
@@ -12,7 +12,6 @@ import Skeleton from '../components/shared/Skeleton';
 import EmptyState from '../components/shared/EmptyState';
 import { formatDate, formatCurrency } from '../utils/formatters';
 import ScrollReveal from '../components/animations/ScrollReveal';
-import Tilt3D from '../components/animations/Tilt3D';
 import AnimatedCounter from '../components/animations/AnimatedCounter';
 import MagneticButton from '../components/animations/MagneticButton';
 import StaggerContainer, { StaggerItem } from '../components/animations/StaggerContainer';
@@ -32,6 +31,7 @@ export default function TripsPage() {
 
   const { data, isLoading } = useTrips({ status: statusFilter !== 'all' ? statusFilter : undefined });
   const createTrip = useCreateTrip();
+  const deleteTrip = useDeleteTrip();
 
   const trips = Array.isArray(data) ? data : data?.items || data?.data || [];
   const totalTrips = trips.length;
@@ -57,6 +57,13 @@ export default function TripsPage() {
     }
   };
 
+  const handleDeleteTrip = async (e, id) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (window.confirm('Are you sure you want to delete this trip?')) {
+      await deleteTrip.mutateAsync(id);
+    }
+  };
 
   return (
     <div className="trips-page">
@@ -79,24 +86,16 @@ export default function TripsPage() {
         {/* Stats */}
         <StaggerContainer className="trips-stats" staggerDelay={0.1}>
           <StaggerItem>
-            <Tilt3D intensity={5} scale={1.02}>
-              <StatCard icon={Map} label="Total Trips" value={<AnimatedCounter value={totalTrips} />} color="terra" />
-            </Tilt3D>
+            <StatCard icon={Map} label="Total Trips" value={<AnimatedCounter value={totalTrips} />} color="terra" />
           </StaggerItem>
           <StaggerItem>
-            <Tilt3D intensity={5} scale={1.02}>
-              <StatCard icon={Plane} label="Active" value={<AnimatedCounter value={activeTrips} />} color="ocean" />
-            </Tilt3D>
+            <StatCard icon={Plane} label="Active" value={<AnimatedCounter value={activeTrips} />} color="ocean" />
           </StaggerItem>
           <StaggerItem>
-            <Tilt3D intensity={5} scale={1.02}>
-              <StatCard icon={DollarSign} label="Total Budget" value={<AnimatedCounter value={totalBudget} prefix="$" />} color="sand" />
-            </Tilt3D>
+            <StatCard icon={DollarSign} label="Total Budget" value={<AnimatedCounter value={totalBudget} prefix="$" />} color="sand" />
           </StaggerItem>
           <StaggerItem>
-            <Tilt3D intensity={5} scale={1.02}>
-              <StatCard icon={Globe} label="Destinations" value={<AnimatedCounter value={destinations} />} color="success" />
-            </Tilt3D>
+            <StatCard icon={Globe} label="Destinations" value={<AnimatedCounter value={destinations} />} color="success" />
           </StaggerItem>
         </StaggerContainer>
 
@@ -125,25 +124,53 @@ export default function TripsPage() {
             ))}
           </div>
         ) : trips.length === 0 ? (
-          <ScrollReveal variant="scaleUp">
-            <EmptyState icon={Map} title="No trips yet" description="Create your first trip and start planning your next adventure."
-              action={<Button variant="primary" onClick={() => setShowCreateModal(true)}><Plus size={16} /> Create Your First Trip</Button>} />
-          </ScrollReveal>
+          <div style={{ position: 'relative', overflow: 'hidden', padding: '100px 0' }}>
+            <motion.div
+              animate={{ y: [0, 30, 0], opacity: [0.1, 0.25, 0.1] }}
+              transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
+              style={{ position: 'absolute', top: '5%', left: '15%', width: '350px', height: '350px', background: 'radial-gradient(circle, var(--terra-500) 0%, transparent 70%)', filter: 'blur(45px)', zIndex: 0 }}
+            />
+            <motion.div
+              animate={{ y: [0, -20, 0], opacity: [0.1, 0.2, 0.1] }}
+              transition={{ duration: 18, repeat: Infinity, ease: "linear" }}
+              style={{ position: 'absolute', bottom: '5%', right: '15%', width: '450px', height: '450px', background: 'radial-gradient(circle, var(--sand-500) 0%, transparent 70%)', filter: 'blur(55px)', zIndex: 0 }}
+            />
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <ScrollReveal variant="scaleUp">
+                <EmptyState icon={Map} title="No trips yet" description="Create your first trip and start planning your next adventure."
+                  action={<Button variant="primary" onClick={() => setShowCreateModal(true)}><Plus size={16} /> Create Your First Trip</Button>} />
+              </ScrollReveal>
+            </div>
+          </div>
         ) : (
           <StaggerContainer className="trips-grid" staggerDelay={0.08}>
             {trips.map((trip) => (
               <StaggerItem key={trip.id}>
-                <Tilt3D intensity={6} scale={1.02} glare style={{ borderRadius: 'var(--radius-lg)' }}>
+                <motion.div whileHover={{ y: -4, scale: 1.01 }}>
                   <Link to={`/trips/${trip.id}`} className="trip-card">
                     {trip.coverImageUrl ? (
                       <div className="trip-card-image">
                         <img src={trip.coverImageUrl} alt={trip.title} loading="lazy" />
                         <span className={`trip-card-status ${trip.status?.toLowerCase()}`}>{trip.status}</span>
+                        <button 
+                          className="trip-card-delete-btn" 
+                          onClick={(e) => handleDeleteTrip(e, trip.id)}
+                          aria-label="Delete trip"
+                        >
+                          <Trash2 size={16} />
+                        </button>
                       </div>
                     ) : (
                       <div className="trip-card-image-placeholder">
                         <Map size={36} />
                         <span className={`trip-card-status ${trip.status?.toLowerCase()}`} style={{ position: 'absolute', top: 'var(--space-3)', right: 'var(--space-3)' }}>{trip.status}</span>
+                        <button 
+                          className="trip-card-delete-btn" 
+                          onClick={(e) => handleDeleteTrip(e, trip.id)}
+                          aria-label="Delete trip"
+                        >
+                          <Trash2 size={16} />
+                        </button>
                       </div>
                     )}
                     <div className="trip-card-body">
@@ -155,7 +182,7 @@ export default function TripsPage() {
                       </div>
                     </div>
                   </Link>
-                </Tilt3D>
+                </motion.div>
               </StaggerItem>
             ))}
           </StaggerContainer>

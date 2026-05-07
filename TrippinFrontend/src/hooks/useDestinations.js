@@ -31,6 +31,18 @@ export function usePopularDestinations(count = 6) {
   });
 }
 
+export function useTrendingDestinations(count = 12) {
+  return useQuery({
+    queryKey: ['destinations', 'trending', count],
+    queryFn: async () => {
+      const { data } = await api.get(`/destinations/trending?count=${count}`);
+      return data;
+    },
+    staleTime: 10 * 60 * 1000, // refresh every 10 min on client
+    refetchOnWindowFocus: false,
+  });
+}
+
 export function useDestination(id) {
   return useQuery({
     queryKey: ['destinations', id],

@@ -41,9 +41,23 @@ export default function BookingsPage() {
         </ScrollReveal>
 
         {bookings.length === 0 ? (
-          <ScrollReveal variant="scaleUp">
-            <EmptyState icon={CreditCard} title="No bookings yet" description="When you add bookings to your trips, they'll all appear here." />
-          </ScrollReveal>
+          <div style={{ position: 'relative', overflow: 'hidden', padding: '100px 0' }}>
+            <motion.div
+              animate={{ y: [0, 20, 0], opacity: [0.1, 0.3, 0.1] }}
+              transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+              style={{ position: 'absolute', top: '10%', left: '20%', width: '300px', height: '300px', background: 'radial-gradient(circle, var(--ocean-500) 0%, transparent 70%)', filter: 'blur(40px)', zIndex: 0 }}
+            />
+            <motion.div
+              animate={{ y: [0, -30, 0], opacity: [0.1, 0.2, 0.1] }}
+              transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+              style={{ position: 'absolute', bottom: '10%', right: '20%', width: '400px', height: '400px', background: 'radial-gradient(circle, var(--terra-500) 0%, transparent 70%)', filter: 'blur(50px)', zIndex: 0 }}
+            />
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <ScrollReveal variant="scaleUp">
+                <EmptyState icon={CreditCard} title="No bookings yet" description="When you add bookings to your trips, they'll all appear here." />
+              </ScrollReveal>
+            </div>
+          </div>
         ) : (
           <StaggerContainer className="booking-cards" staggerDelay={0.06}>
             {bookings.map((booking) => {

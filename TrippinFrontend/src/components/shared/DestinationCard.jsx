@@ -2,8 +2,19 @@ import { Link } from 'react-router-dom';
 import { MapPin, Star } from 'lucide-react';
 import CategoryBadge from './CategoryBadge';
 import PremiumImage from './PremiumImage';
+import { useCurrency } from '../../contexts/CurrencyContext';
+
+// Simple mock conversion rates
+const RATES = {
+  USD: 1,
+  INR: 83.5,
+  EUR: 0.92,
+  GBP: 0.79
+};
 
 export default function DestinationCard({ destination, index = 0 }) {
+  const { currency } = useCurrency();
+
   const {
     id,
     name,
@@ -13,11 +24,22 @@ export default function DestinationCard({ destination, index = 0 }) {
     imageUrl,
     thumbnailUrl,
     averageCostPerDay,
-    currency = 'USD',
+    currency: baseCurrency = 'USD',
     averageRating,
     reviewCount,
     tags,
   } = destination;
+
+  // Convert cost from base to user's currency
+  const baseRate = RATES[baseCurrency] || 1;
+  const targetRate = RATES[currency] || 1;
+  const convertedCost = (averageCostPerDay / baseRate) * targetRate;
+
+  const formattedCost = new Intl.NumberFormat(navigator.language || 'en-US', {
+    style: 'currency',
+    currency: currency,
+    maximumFractionDigits: 0
+  }).format(convertedCost);
 
   const imageSource = thumbnailUrl || imageUrl || `https://images.unsplash.com/photo-1488085061387-422e29b40080?w=600&h=400&fit=crop`;
 
@@ -38,7 +60,7 @@ export default function DestinationCard({ destination, index = 0 }) {
           <CategoryBadge category={category} />
         </div>
         <div className="destination-card-cost">
-          ${averageCostPerDay}/{currency === 'USD' ? 'day' : `day ${currency}`}
+          {formattedCost}/day
         </div>
       </div>
       <div className="destination-card-body">
