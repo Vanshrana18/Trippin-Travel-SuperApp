@@ -1,10 +1,11 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Trippin.API.Data;
 using Trippin.API.DTOs;
 
 namespace Trippin.API.Services;
 
-public class DestinationService(AppDbContext db, PexelsService pexels)
+public class DestinationService(AppDbContext db, PexelsService pexels, GlobalDiscoveryService discovery, IMemoryCache cache)
 {
     public async Task<PagedResult<DestinationListDto>> SearchAsync(
         string? search,
@@ -107,6 +108,24 @@ public class DestinationService(AppDbContext db, PexelsService pexels)
             };
         }).ToList();
 
+        // ─── Dynamic Global Fallback ───
+        // If DB returned 0 results and the user typed a search query,
+        // try to discover destinations from the global API
+        if (items.Count == 0 && !string.IsNullOrWhiteSpace(search))
+        {
+            var discovered = await discovery.DiscoverAsync(search, ct);
+            if (discovered.Count > 0)
+            {
+                return new PagedResult<DestinationListDto>
+                {
+                    Items      = discovered,
+                    Page       = 1,
+                    PageSize   = pageSize,
+                    TotalCount = discovered.Count
+                };
+            }
+        }
+
         return new PagedResult<DestinationListDto>
         {
             Items      = items,
@@ -171,6 +190,70 @@ public class DestinationService(AppDbContext db, PexelsService pexels)
                 ReviewCount       = r?.Cnt ?? 0
             };
         }).ToList();
+    }
+
+    /// <summary>
+    /// Returns a rotating, randomized selection of destinations.
+    /// Results change every 30 minutes so the Discover page feels alive.
+    /// Destinations with valid images are prioritized.
+    /// </summary>
+    public async Task<IReadOnlyList<DestinationListDto>> GetTrendingAsync(
+        int count,
+        CancellationToken ct = default)
+    {
+        count = Math.Clamp(count, 1, 24);
+
+        // Use a time-based seed that rotates every 30 minutes
+        var timeBucket = DateTime.UtcNow.Ticks / (TimeSpan.TicksPerMinute * 30);
+        var cacheKey = $"trending_{count}_{timeBucket}";
+
+        return await cache.GetOrCreateAsync(cacheKey, async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30);
+
+            // Prefer destinations with real images (not placeholder unsplash)
+            var allDests = await db.Destinations
+                .AsNoTracking()
+                .Where(d => !d.IsDeleted)
+                .Select(d => new
+                {
+                    d.Id, d.Name, d.Country, d.City,
+                    d.Category, d.ThumbnailUrl, d.ImageUrl,
+                    d.AverageCostPerDay, d.Currency, d.IsPopular
+                })
+                .ToListAsync(ct);
+
+            // Shuffle using the time-based seed
+            var rng = new Random((int)(timeBucket % int.MaxValue));
+            var shuffled = allDests
+                .OrderByDescending(d => !string.IsNullOrWhiteSpace(d.ThumbnailUrl) &&
+                                        !d.ThumbnailUrl!.Contains("images.unsplash.com/photo-") ? 1 : 0)
+                .ThenBy(_ => rng.Next())
+                .Take(count)
+                .ToList();
+
+            var ids = shuffled.Select(d => d.Id).ToList();
+            var ratings = await db.Reviews
+                .AsNoTracking()
+                .Where(r => ids.Contains(r.DestinationId))
+                .GroupBy(r => r.DestinationId)
+                .Select(g => new { DestinationId = g.Key, Avg = g.Average(r => (double)r.Rating), Cnt = g.Count() })
+                .ToListAsync(ct);
+            var ratingLookup = ratings.ToDictionary(r => r.DestinationId);
+
+            return shuffled.Select(d =>
+            {
+                ratingLookup.TryGetValue(d.Id, out var r);
+                return new DestinationListDto
+                {
+                    Id = d.Id, Name = d.Name, Country = d.Country, City = d.City,
+                    Category = d.Category, ThumbnailUrl = d.ThumbnailUrl,
+                    AverageCostPerDay = d.AverageCostPerDay, Currency = d.Currency,
+                    IsPopular = d.IsPopular,
+                    AverageRating = r?.Avg, ReviewCount = r?.Cnt ?? 0
+                };
+            }).ToList() as IReadOnlyList<DestinationListDto>;
+        }) ?? Array.Empty<DestinationListDto>();
     }
 
     public async Task<DestinationDetailDto?> GetByIdAsync(

@@ -18,7 +18,7 @@ public class TripService(AppDbContext db)
     {
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 48);
-        var q = db.Trips.AsNoTracking().Where(t => t.UserId == userId);
+        var q = db.Trips.AsNoTracking().Where(t => t.UserId == userId && !t.IsDeleted);
 
         if (!string.IsNullOrWhiteSpace(status))
             q = q.Where(t => t.Status == status);
@@ -67,7 +67,7 @@ public class TripService(AppDbContext db)
     {
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 48);
-        var q = db.Trips.AsNoTracking().Where(t => t.IsPublic);
+        var q = db.Trips.AsNoTracking().Where(t => t.IsPublic && !t.IsDeleted);
 
         q = (sortBy.ToLowerInvariant(), sortOrder.ToLowerInvariant()) switch
         {
@@ -104,7 +104,7 @@ public class TripService(AppDbContext db)
     {
         var t = await db.Trips.AsNoTracking()
             .Include(x => x.TripDestinations).ThenInclude(td => td.Destination)
-            .FirstOrDefaultAsync(x => x.Id == tripId, ct);
+            .FirstOrDefaultAsync(x => x.Id == tripId && !x.IsDeleted, ct);
 
         if (t is null) return null;
         if (t.UserId != userId && !(allowPublicRead && t.IsPublic)) return null;

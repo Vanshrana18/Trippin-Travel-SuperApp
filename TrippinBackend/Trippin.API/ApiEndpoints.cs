@@ -124,6 +124,12 @@ public static class ApiEndpoints
             return Results.Ok(list);
         }).AllowAnonymous();
 
+        api.MapGet("/destinations/trending", async (DestinationService svc, int count = 12, CancellationToken ct = default) =>
+        {
+            var list = await svc.GetTrendingAsync(count, ct);
+            return Results.Ok(list);
+        }).AllowAnonymous();
+
         api.MapGet("/destinations/recommendations", async (HttpContext ctx, DestinationService svc, int count = 8, CancellationToken ct = default) =>
         {
             var uid = ctx.User.GetUserId();
@@ -136,6 +142,28 @@ public static class ApiEndpoints
         {
             var d = await svc.GetByIdAsync(id, ct);
             return d is null ? Results.NotFound() : Results.Ok(d);
+        }).AllowAnonymous();
+
+        api.MapGet("/destinations/heal-images", async (Trippin.API.Data.AppDbContext db, PexelsService pexels, CancellationToken ct = default) =>
+        {
+            var brokenDests = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync(
+                System.Linq.Queryable.Where(db.Destinations, d => d.ImageUrl != null && d.ImageUrl.Contains("unsplash.com")), ct);
+
+            int healed = 0;
+            foreach (var dest in brokenDests)
+            {
+                var query = $"{dest.Name} {dest.Country} travel landmark";
+                var (hero, thumb) = await pexels.GetDestinationImagesAsync(query, ct);
+                if (!string.IsNullOrEmpty(hero))
+                {
+                    dest.ImageUrl = hero;
+                    dest.ThumbnailUrl = thumb;
+                    healed++;
+                }
+            }
+
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(new { message = $"Healed {healed} broken images out of {brokenDests.Count} destinations." });
         }).AllowAnonymous();
     }
 

@@ -31,6 +31,7 @@ builder.Services.AddHttpClient();
 builder.Services.AddSingleton<RapidTravelService>();
 builder.Services.AddSingleton<GeminiService>();
 builder.Services.AddSingleton<PexelsService>();
+builder.Services.AddScoped<GlobalDiscoveryService>();
 
 // Phase 3: SaaS Infrastructure
 builder.Services.AddMemoryCache();

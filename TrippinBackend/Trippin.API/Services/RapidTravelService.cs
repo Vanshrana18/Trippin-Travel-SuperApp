@@ -55,18 +55,25 @@ public class RapidTravelService(HttpClient httpClient, IConfiguration config, IM
 
             if (list.ValueKind == JsonValueKind.Array)
             {
-                foreach (var item in list.EnumerateArray().Take(8))
+                foreach (var item in list.EnumerateArray().Take(40))
                 {
                     try {
+                        var itinerary = item.GetProperty("itineraries")[0];
+                        var segments = itinerary.GetProperty("segments");
+                        var firstSegment = segments[0];
+                        var durationStr = (itinerary.TryGetProperty("duration", out var dur) ? dur.GetString()?.Replace("PT", "").ToLower() : "8h") ?? "8h";
+                        int stops = segments.GetArrayLength() - 1;
+
                         results.Add(new FlightSearchResult
                         {
-                            Airline = item.GetProperty("itineraries")[0].GetProperty("segments")[0].GetProperty("carrierName").GetString() ?? "Airline",
-                            FlightNumber = item.GetProperty("itineraries")[0].GetProperty("segments")[0].GetProperty("flightNumber").GetString() ?? "FL123",
+                            Airline = firstSegment.GetProperty("carrierName").GetString() ?? "Airline",
+                            FlightNumber = firstSegment.GetProperty("flightNumber").GetString() ?? "FL123",
                             Origin = from,
                             Destination = to,
-                            DepartureTime = DateTime.Parse(item.GetProperty("itineraries")[0].GetProperty("segments")[0].GetProperty("departureTime").GetString()!),
-                            ArrivalTime = DateTime.Parse(item.GetProperty("itineraries")[0].GetProperty("segments")[0].GetProperty("arrivalTime").GetString()!),
-                            Duration = "8h",
+                            DepartureTime = DateTime.Parse(firstSegment.GetProperty("departureTime").GetString()!),
+                            ArrivalTime = DateTime.Parse(segments[segments.GetArrayLength() - 1].GetProperty("arrivalTime").GetString()!),
+                            Duration = durationStr ?? "8h",
+                            Stops = stops,
                             Price = item.GetProperty("price").GetProperty("total").GetDecimal(),
                             Currency = currency
                         });
@@ -108,7 +115,7 @@ public class RapidTravelService(HttpClient httpClient, IConfiguration config, IM
 
             if (json.TryGetProperty("data", out var d) && d.TryGetProperty("hotels", out var list))
             {
-                foreach (var item in list.EnumerateArray().Take(8))
+                foreach (var item in list.EnumerateArray().Take(40))
                 {
                     try {
                         // In booking-com15, most data is inside the 'property' object
@@ -157,7 +164,7 @@ public class RapidTravelService(HttpClient httpClient, IConfiguration config, IM
 
             if (json.TryGetProperty("data", out var d) && d.TryGetProperty("results", out var list))
             {
-                foreach (var item in list.EnumerateArray().Take(5))
+                foreach (var item in list.EnumerateArray().Take(20))
                 {
                     try {
                         results.Add(new TaxiSearchResult
@@ -197,7 +204,7 @@ public class RapidTravelService(HttpClient httpClient, IConfiguration config, IM
 
             if (data.TryGetProperty("data", out var list) && list.ValueKind == JsonValueKind.Array)
             {
-                foreach (var item in list.EnumerateArray().Take(5))
+                foreach (var item in list.EnumerateArray().Take(20))
                 {
                     results.Add(new TrainSearchResult
                     {
