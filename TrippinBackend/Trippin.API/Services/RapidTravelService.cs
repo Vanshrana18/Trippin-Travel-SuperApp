@@ -31,7 +31,7 @@ public class RapidTravelService(HttpClient httpClient, IConfiguration config, IM
         return (query, "city");
     }
 
-    public async Task<List<FlightSearchResult>> SearchFlightsAsync(string from, string to, DateTime departDate, string currency = "USD", CancellationToken ct = default)
+    public async Task<List<FlightSearchResult>> SearchFlightsAsync(string from, string to, DateTime departDate, string currency = "USD", int adults = 1, CancellationToken ct = default)
     {
         var cacheKey = $"flights_{from}_{to}_{departDate:yyyyMMdd}_{currency}";
         
@@ -90,7 +90,7 @@ public class RapidTravelService(HttpClient httpClient, IConfiguration config, IM
         }) ?? new List<FlightSearchResult>();
     }
 
-    public async Task<List<HotelSearchResult>> SearchHotelsAsync(string query, DateTime checkIn, DateTime checkOut, string currency = "USD", CancellationToken ct = default)
+    public async Task<List<HotelSearchResult>> SearchHotelsAsync(string query, DateTime checkIn, DateTime checkOut, string currency = "USD", int adults = 1, CancellationToken ct = default)
     {
         var cacheKey = $"hotels_{query}_{checkIn:yyyyMMdd}_{checkOut:yyyyMMdd}_{currency}";
 

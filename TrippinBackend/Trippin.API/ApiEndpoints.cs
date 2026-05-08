@@ -414,7 +414,7 @@ public static class ApiEndpoints
                 return Results.BadRequest(new { error = "Origin, destination, and date are required." });
             
             var d = DateTime.Parse(date);
-            var results = await svc.SearchFlightsAsync(origin, destination, d, currency);
+            var results = await svc.SearchFlightsAsync(origin, destination, d, currency, adults);
             return Results.Ok(results);
         });
 
@@ -446,7 +446,7 @@ public static class ApiEndpoints
             
             var d1 = DateTime.Parse(checkIn);
             var d2 = DateTime.Parse(checkOut);
-            var results = await svc.SearchHotelsAsync(cityCode, d1, d2, currency);
+            var results = await svc.SearchHotelsAsync(cityCode, d1, d2, currency, adults);
             return Results.Ok(results);
         });
 

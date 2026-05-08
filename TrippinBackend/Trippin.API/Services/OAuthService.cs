@@ -87,7 +87,7 @@ public class OAuthService(AppDbContext db, JwtHelper jwt, IConfiguration config,
                 user = new User
                 {
                     Email = email!,
-                    Name = name,
+                    Name = name ?? "GitHub User",
                     AvatarUrl = avatar,
                     GitHubId = githubId,
                     AuthProvider = "GitHub",
