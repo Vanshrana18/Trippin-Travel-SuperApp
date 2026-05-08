@@ -1,11 +1,13 @@
-import { Waves, Mountain, Building2, Landmark, Compass } from 'lucide-react';
+import { Palmtree, Mountain, Building2, Landmark, Compass, Trees, Globe } from 'lucide-react';
 
 const categoryConfig = {
-  beach: { icon: Waves },
+  all: { icon: Globe },
+  beach: { icon: Palmtree },
   mountains: { icon: Mountain },
   city: { icon: Building2 },
   cultural: { icon: Landmark },
   adventure: { icon: Compass },
+  nature: { icon: Trees },
 };
 
 export default function CategoryBadge({ category }) {
@@ -14,7 +16,7 @@ export default function CategoryBadge({ category }) {
 
   return (
     <span className={`category-badge ${category?.toLowerCase()}`}>
-      <Icon size={12} />
+      <Icon size={12} strokeWidth={2.5} />
       {category}
     </span>
   );

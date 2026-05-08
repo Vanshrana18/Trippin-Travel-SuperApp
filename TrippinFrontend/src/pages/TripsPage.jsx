@@ -106,9 +106,9 @@ export default function TripsPage() {
             {STATUS_FILTERS.map((status) => (
               <motion.button
                 key={status}
-                className={`category-pill ${statusFilter === status ? 'active' : ''}`}
+                className={`category-pill-premium ${statusFilter === status ? 'active' : ''}`}
                 onClick={() => setStatusFilter(status)}
-                whileHover={{ scale: 1.08, y: -2 }}
+                whileHover={{ scale: 1.05, y: -2 }}
                 whileTap={{ scale: 0.95 }}
               >
                 {status === 'all' ? 'All Trips' : status}

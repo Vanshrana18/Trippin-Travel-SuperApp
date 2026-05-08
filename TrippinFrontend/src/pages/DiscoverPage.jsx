@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useDestinations, useTrendingDestinations } from '../hooks/useDestinations';
-import { Search, X, SlidersHorizontal, TrendingUp } from 'lucide-react';
+import { Search, X, SlidersHorizontal, TrendingUp, Globe, Palmtree, Mountain, Building2, Landmark, Compass, Trees } from 'lucide-react';
 import DestinationCard from '../components/shared/DestinationCard';
 import Skeleton from '../components/shared/Skeleton';
 import EmptyState from '../components/shared/EmptyState';
@@ -11,13 +11,13 @@ import StaggerContainer, { StaggerItem } from '../components/animations/StaggerC
 import { motion } from 'framer-motion';
 
 const CATEGORIES = [
-  { id: 'all', label: 'All', icon: '🌍' },
-  { id: 'beach', label: 'Beach', icon: '🏖️' },
-  { id: 'mountains', label: 'Mountains', icon: '⛰️' },
-  { id: 'city', label: 'City', icon: '🏙️' },
-  { id: 'cultural', label: 'Cultural', icon: '🏛️' },
-  { id: 'adventure', label: 'Adventure', icon: '🧗' },
-  { id: 'nature', label: 'Nature', icon: '🌲' }
+  { id: 'all', label: 'All', icon: Globe },
+  { id: 'beach', label: 'Beach', icon: Palmtree },
+  { id: 'mountains', label: 'Mountains', icon: Mountain },
+  { id: 'city', label: 'City', icon: Building2 },
+  { id: 'cultural', label: 'Cultural', icon: Landmark },
+  { id: 'adventure', label: 'Adventure', icon: Compass },
+  { id: 'nature', label: 'Nature', icon: Trees }
 ];
 
 export default function DiscoverPage() {
@@ -87,11 +87,11 @@ export default function DiscoverPage() {
         {/* Filters */}
         <ScrollReveal variant="fadeUp" delay={0.1}>
           <div className="discover-filters">
-            <div className="discover-search">
-              <div className="form-input-wrapper">
-                <span className="form-input-icon"><Search size={18} /></span>
+            <div className="discover-search-premium">
+              <div className="search-input-wrapper-modern">
+                <Search className="search-icon-modern" size={20} />
                 <input
-                  className="form-input"
+                  className="search-input-modern"
                   type="text"
                   placeholder="Search any city, country, or landmark worldwide..."
                   value={searchInput}
@@ -101,14 +101,10 @@ export default function DiscoverPage() {
                 {searchInput && (
                   <button
                     onClick={clearSearch}
-                    style={{
-                      position: 'absolute', right: '12px', top: '50%',
-                      transform: 'translateY(-50%)', background: 'none',
-                      border: 'none', color: 'var(--ink-faint)', cursor: 'pointer', padding: '4px',
-                    }}
+                    className="search-clear-btn-modern"
                     aria-label="Clear search"
                   >
-                    <X size={16} />
+                    <X size={18} />
                   </button>
                 )}
               </div>
@@ -126,7 +122,7 @@ export default function DiscoverPage() {
                   whileHover={{ scale: 1.05, y: -2 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  <span className="cat-icon">{cat.icon}</span>
+                  <span className="cat-icon"><cat.icon size={16} /></span>
                   <span>{cat.label}</span>
                 </motion.button>
               ))}
