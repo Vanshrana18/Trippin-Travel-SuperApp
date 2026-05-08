@@ -147,7 +147,7 @@ export default function DiscoverPage() {
             ) : (
               <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <TrendingUp size={14} style={{ color: 'var(--terra-400)' }} />
-                Trending Now — refreshes every 30 min
+                Trending Now
               </span>
             )}
           </div>
