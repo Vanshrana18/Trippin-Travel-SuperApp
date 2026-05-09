@@ -64,11 +64,11 @@ export default function SearchPage() {
   };
 
   // Filtered Results
-  const filteredFlights = results.flights.filter(flight => {
+  const filteredFlights = (results?.flights || []).filter(flight => {
     const stopMatch = (flight.stops === 0 && filters.stops.includes('0')) ||
                       (flight.stops === 1 && filters.stops.includes('1')) ||
                       (flight.stops >= 2 && filters.stops.includes('2+'));
-    const priceMatch = flight.price <= filters.maxPrice;
+    const priceMatch = (flight.price || 0) <= filters.maxPrice;
     return stopMatch && priceMatch;
   });
 
@@ -433,28 +433,57 @@ export default function SearchPage() {
               <div className="results-sidebar">
                 <div className="filter-card">
                   <h3>Filters</h3>
-                  <div className="filter-group">
-                    <h4>Stops</h4>
-                    <label>
-                      <input type="checkbox" checked={filters.stops.includes('0')} onChange={() => toggleStopFilter('0')} /> Non-stop
-                    </label>
-                    <label>
-                      <input type="checkbox" checked={filters.stops.includes('1')} onChange={() => toggleStopFilter('1')} /> 1 Stop
-                    </label>
-                    <label>
-                      <input type="checkbox" checked={filters.stops.includes('2+')} onChange={() => toggleStopFilter('2+')} /> 2+ Stops
-                    </label>
-                  </div>
+                  
+                  {/* Flight Specific Filters */}
+                  {activeTab === 'flights' && (
+                    <div className="filter-group">
+                      <h4>Stops</h4>
+                      <label>
+                        <input type="checkbox" checked={filters.stops.includes('0')} onChange={() => toggleStopFilter('0')} /> Non-stop
+                      </label>
+                      <label>
+                        <input type="checkbox" checked={filters.stops.includes('1')} onChange={() => toggleStopFilter('1')} /> 1 Stop
+                      </label>
+                      <label>
+                        <input type="checkbox" checked={filters.stops.includes('2+')} onChange={() => toggleStopFilter('2+')} /> 2+ Stops
+                      </label>
+                    </div>
+                  )}
+
+                  {/* Hotel Specific Filters */}
+                  {activeTab === 'hotels' && (
+                    <div className="filter-group">
+                      <h4>Star Rating</h4>
+                      {[5, 4, 3, 2].map(star => (
+                        <label key={star}>
+                          <input type="checkbox" defaultChecked /> {star} Stars
+                        </label>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Train Specific Filters */}
+                  {activeTab === 'trains' && (
+                    <div className="filter-group">
+                      <h4>Coach Class</h4>
+                      {['1AC', '2AC', '3AC', 'SL'].map(c => (
+                        <label key={c}>
+                          <input type="checkbox" defaultChecked /> {c}
+                        </label>
+                      ))}
+                    </div>
+                  )}
+
                   <div className="filter-group">
                     <h4>Max Price: {formatCurrency(filters.maxPrice, currency)}</h4>
                     <input 
                       type="range" 
                       min="0" 
                       max="1000000" 
-                      step="1000"
+                      step="5000"
                       value={filters.maxPrice}
                       onChange={(e) => setFilters(prev => ({ ...prev, maxPrice: parseInt(e.target.value) }))}
-                      style={{ width: '100%' }} 
+                      className="modern-range-slider"
                     />
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginTop: '4px' }}>
                       <span>0</span><span>{formatCurrency(1000000, currency)}+</span>
@@ -481,7 +510,7 @@ export default function SearchPage() {
                       </div>
                     ) : (
                       <StaggerContainer className="search-results-list" staggerDelay={0.05}>
-                        {filteredFlights.map((flight, idx) => (
+                        {(filteredFlights || []).map((flight, idx) => (
                           <StaggerItem key={idx}>
                             <div className="search-result-card flight-card-modern">
                               <div className="flight-airline-box">
@@ -527,7 +556,7 @@ export default function SearchPage() {
                 {activeTab === 'hotels' && (
                   <>
                     <div className="results-header-modern">
-                      <h2>{results.hotels.length} Properties in {hotelForm.location}</h2>
+                      <h2>{(results?.hotels || []).length} Properties in {hotelForm.location}</h2>
                       <div className="sort-by">Sort by: <strong>Recommended</strong></div>
                     </div>
                     {results.hotels.length === 0 ? (
@@ -538,7 +567,7 @@ export default function SearchPage() {
                       </div>
                     ) : (
                       <StaggerContainer className="search-results-list" staggerDelay={0.05}>
-                        {results.hotels.map((hotel, idx) => (
+                        {(results?.hotels || []).map((hotel, idx) => (
                           <StaggerItem key={idx}>
                             <div className="search-result-card hotel-card-modern">
                               <div className="hotel-card-image" style={{ backgroundImage: `url(${hotel.imageUrl || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=300&fit=crop'})` }}>
@@ -574,7 +603,7 @@ export default function SearchPage() {
                 {activeTab === 'trains' && (
                   <>
                     <div className="results-header-modern">
-                      <h2>{results.trains.length} Trains Found</h2>
+                      <h2>{(results?.trains || []).length} Trains Found</h2>
                     </div>
                     {results.trains.length === 0 ? (
                       <div className="empty-results-state">
@@ -584,7 +613,7 @@ export default function SearchPage() {
                       </div>
                     ) : (
                       <StaggerContainer className="search-results-list" staggerDelay={0.05}>
-                        {results.trains.map((train, idx) => (
+                        {(results?.trains || []).map((train, idx) => (
                           <StaggerItem key={idx}>
                             <div className="search-result-card flight-card-modern">
                               <div className="flight-airline-box">
@@ -627,7 +656,7 @@ export default function SearchPage() {
                 {activeTab === 'taxis' && (
                   <>
                     <div className="results-header-modern">
-                      <h2>{results.taxis.length} Taxis Available</h2>
+                      <h2>{(results?.taxis || []).length} Taxis Available</h2>
                     </div>
                     {results.taxis.length === 0 ? (
                       <div className="empty-results-state">
@@ -637,7 +666,7 @@ export default function SearchPage() {
                       </div>
                     ) : (
                       <StaggerContainer className="search-results-grid" staggerDelay={0.05}>
-                        {results.taxis.map((taxi, idx) => (
+                        {(results?.taxis || []).map((taxi, idx) => (
                           <StaggerItem key={idx}>
                             <div className="search-result-card taxi-card-modern">
                               <div className="taxi-img-wrapper">
