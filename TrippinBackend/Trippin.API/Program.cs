@@ -77,7 +77,7 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 builder.Services.AddCors(o => o.AddPolicy("Frontend", p => p
-    .WithOrigins("http://localhost:5173", "http://localhost:3000")
+    .WithOrigins("http://localhost:5173", "https://trippin-travel-super-app.vercel.app" , "http://localhost:3000")
     .AllowAnyHeader()
     .AllowAnyMethod()));
 
