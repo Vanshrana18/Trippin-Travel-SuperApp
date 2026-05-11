@@ -14,7 +14,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
     options.UseSqlServer(
-        builder.Configuration.GetConnectionString("DefaultConnection"),
+        builder.Configuration.GetConnectionString("AzureConnection"),
         sql => sql.EnableRetryOnFailure(3));
 });
 
@@ -85,7 +85,7 @@ var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
-    var raw = app.Configuration.GetConnectionString("DefaultConnection");
+    var raw = app.Configuration.GetConnectionString("AzureConnection");
     (string? server, string? database) = ConnectionStringParser.ParseSqlServer(raw);
     if (server is not null && database is not null)
     {
