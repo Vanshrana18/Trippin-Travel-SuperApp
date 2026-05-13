@@ -8,6 +8,42 @@ namespace Trippin.API.Services;
 public class RapidTravelService(HttpClient httpClient, IConfiguration config, IMemoryCache cache)
 {
     private readonly string _apiKey = config["RapidAPI:Key"] ?? throw new Exception("RapidAPI Key missing");
+    private readonly string _bookingHost = config["RapidAPI:HotelHost"] ?? "booking-com15.p.rapidapi.com";
+    private readonly string _trainHost = config["RapidAPI:TrainHost"] ?? "irctc1.p.rapidapi.com";
+
+    // Centralized HTTP helper with proper retry (creates a fresh request each time)
+    private async Task<string> CallApiAsync(string url, string host, CancellationToken ct, int maxRetries = 2)
+    {
+        for (int attempt = 0; attempt <= maxRetries; attempt++)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Add("X-RapidAPI-Key", _apiKey);
+            request.Headers.Add("X-RapidAPI-Host", host);
+
+            var response = await httpClient.SendAsync(request, ct);
+            var content = await response.Content.ReadAsStringAsync(ct);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return content;
+            }
+
+            Console.WriteLine($"[API] HTTP {(int)response.StatusCode} from {host} (attempt {attempt + 1}/{maxRetries + 1})");
+
+            if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests && attempt < maxRetries)
+            {
+                var delay = (attempt + 1) * 2000; // 2s, 4s
+                Console.WriteLine($"[API] Rate limited. Waiting {delay}ms before retry...");
+                await Task.Delay(delay, ct);
+                continue;
+            }
+
+            // For non-429 errors or final retry, return what we got
+            return content;
+        }
+
+        return "{}";
+    }
 
     private async Task<(string id, string type)> ResolveLocationAsync(string query, CancellationToken ct)
     {
@@ -17,17 +53,10 @@ public class RapidTravelService(HttpClient httpClient, IConfiguration config, IM
         try
         {
             Console.WriteLine($"[TRANS] Resolving Hotel Location: {query}...");
-            var request = new HttpRequestMessage(HttpMethod.Get, $"https://booking-com15.p.rapidapi.com/api/v1/hotels/searchDestination?query={query}");
-            request.Headers.Add("X-RapidAPI-Key", _apiKey);
-            request.Headers.Add("X-RapidAPI-Host", config["RapidAPI:HotelHost"]);
+            var content = await CallApiAsync(
+                $"https://booking-com15.p.rapidapi.com/api/v1/hotels/searchDestination?query={Uri.EscapeDataString(query)}",
+                _bookingHost, ct);
 
-            var response = await httpClient.SendAsync(request, ct);
-            if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests) {
-                await Task.Delay(1000, ct); // Wait 1s and retry once
-                response = await httpClient.SendAsync(request, ct);
-            }
-
-            var content = await response.Content.ReadAsStringAsync(ct);
             var json = JsonSerializer.Deserialize<JsonElement>(content);
 
             if (json.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Array && data.GetArrayLength() > 0)
@@ -37,9 +66,10 @@ public class RapidTravelService(HttpClient httpClient, IConfiguration config, IM
                 var type = first.GetProperty("dest_type").GetString() ?? "city";
                 var result = (id, type);
                 cache.Set(cacheKey, result, TimeSpan.FromDays(7));
-                Console.WriteLine($"[TRANS] Resolved {query} to ID: {id} ({type})");
+                Console.WriteLine($"[TRANS] Resolved '{query}' -> dest_id={id}, type={type}");
                 return result;
             }
+            Console.WriteLine($"[TRANS] No results for hotel location '{query}'. Raw: {content[..Math.Min(200, content.Length)]}");
         }
         catch (Exception ex) { Console.WriteLine($"[TRANS] Hotel Resolve Error: {ex.Message}"); }
         return (query, "city");
@@ -53,17 +83,10 @@ public class RapidTravelService(HttpClient httpClient, IConfiguration config, IM
         try
         {
             Console.WriteLine($"[TRANS] Resolving Flight Location: {query}...");
-            var request = new HttpRequestMessage(HttpMethod.Get, $"https://booking-com15.p.rapidapi.com/api/v1/flights/searchDestination?query={query}");
-            request.Headers.Add("X-RapidAPI-Key", _apiKey);
-            request.Headers.Add("X-RapidAPI-Host", config["RapidAPI:FlightHost"]);
+            var content = await CallApiAsync(
+                $"https://booking-com15.p.rapidapi.com/api/v1/flights/searchDestination?query={Uri.EscapeDataString(query)}",
+                _bookingHost, ct);
 
-            var response = await httpClient.SendAsync(request, ct);
-            if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests) {
-                await Task.Delay(1000, ct);
-                response = await httpClient.SendAsync(request, ct);
-            }
-
-            var content = await response.Content.ReadAsStringAsync(ct);
             var json = JsonSerializer.Deserialize<JsonElement>(content);
 
             if (json.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Array && data.GetArrayLength() > 0)
@@ -75,9 +98,10 @@ public class RapidTravelService(HttpClient httpClient, IConfiguration config, IM
                 
                 var resolved = id ?? query;
                 cache.Set(cacheKey, resolved, TimeSpan.FromDays(7));
-                Console.WriteLine($"[TRANS] Resolved {query} to Flight ID: {resolved}");
+                Console.WriteLine($"[TRANS] Resolved '{query}' -> Flight ID: {resolved}");
                 return resolved;
             }
+            Console.WriteLine($"[TRANS] No results for flight location '{query}'. Raw: {content[..Math.Min(200, content.Length)]}");
         }
         catch (Exception ex) { Console.WriteLine($"[TRANS] Flight Resolve Error: {ex.Message}"); }
         return query;
@@ -91,26 +115,20 @@ public class RapidTravelService(HttpClient httpClient, IConfiguration config, IM
         try
         {
             Console.WriteLine($"[TRANS] Resolving Train Station: {query}...");
-            var request = new HttpRequestMessage(HttpMethod.Get, $"https://irctc1.p.rapidapi.com/api/v1/searchStation?query={query}");
-            request.Headers.Add("X-RapidAPI-Key", _apiKey);
-            request.Headers.Add("X-RapidAPI-Host", "irctc1.p.rapidapi.com");
+            var content = await CallApiAsync(
+                $"https://irctc1.p.rapidapi.com/api/v1/searchStation?query={Uri.EscapeDataString(query)}",
+                _trainHost, ct);
 
-            var response = await httpClient.SendAsync(request, ct);
-            if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests) {
-                await Task.Delay(1000, ct);
-                response = await httpClient.SendAsync(request, ct);
-            }
-
-            var content = await response.Content.ReadAsStringAsync(ct);
             var json = JsonSerializer.Deserialize<JsonElement>(content);
 
             if (json.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Array && data.GetArrayLength() > 0)
             {
                 var resolved = data[0].GetProperty("stationCode").GetString() ?? query;
                 cache.Set(cacheKey, resolved, TimeSpan.FromDays(7));
-                Console.WriteLine($"[TRANS] Resolved {query} to Train Code: {resolved}");
+                Console.WriteLine($"[TRANS] Resolved '{query}' -> Station: {resolved}");
                 return resolved;
             }
+            Console.WriteLine($"[TRANS] No results for station '{query}'. Raw: {content[..Math.Min(200, content.Length)]}");
         }
         catch (Exception ex) { Console.WriteLine($"[TRANS] Train Resolve Error: {ex.Message}"); }
         return query;
@@ -129,19 +147,12 @@ public class RapidTravelService(HttpClient httpClient, IConfiguration config, IM
             if (!fromId.Contains(".")) fromId += ".AIRPORT";
             if (!toId.Contains(".")) toId += ".AIRPORT";
 
-            Console.WriteLine($"[API] Searching Flights: {fromId} -> {toId}...");
+            Console.WriteLine($"[API] Searching Flights: {fromId} -> {toId} on {departDate:yyyy-MM-dd}...");
 
-            var request = new HttpRequestMessage(HttpMethod.Get, $"https://booking-com15.p.rapidapi.com/api/v1/flights/searchFlights?fromId={fromId}&toId={toId}&departDate={departDate:yyyy-MM-dd}&adults={adults}&sort=CHEAPEST&currencyCode={currency}");
-            request.Headers.Add("X-RapidAPI-Key", _apiKey);
-            request.Headers.Add("X-RapidAPI-Host", "booking-com15.p.rapidapi.com");
+            var content = await CallApiAsync(
+                $"https://booking-com15.p.rapidapi.com/api/v1/flights/searchFlights?fromId={fromId}&toId={toId}&departDate={departDate:yyyy-MM-dd}&adults={adults}&sort=CHEAPEST&currencyCode={currency}",
+                _bookingHost, ct);
 
-            var response = await httpClient.SendAsync(request, ct);
-            if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests) {
-                await Task.Delay(2000, ct);
-                response = await httpClient.SendAsync(request, ct);
-            }
-
-            var content = await response.Content.ReadAsStringAsync(ct);
             var data = JsonSerializer.Deserialize<JsonElement>(content);
             var results = new List<FlightSearchResult>();
 
@@ -154,6 +165,7 @@ public class RapidTravelService(HttpClient httpClient, IConfiguration config, IM
 
             if (list.ValueKind == JsonValueKind.Array)
             {
+                Console.WriteLine($"[API] Parsing {list.GetArrayLength()} flight offers...");
                 foreach (var item in list.EnumerateArray().Take(40))
                 {
                     try {
@@ -174,8 +186,15 @@ public class RapidTravelService(HttpClient httpClient, IConfiguration config, IM
                             Currency = currency,
                             Stops = (segments.ValueKind == JsonValueKind.Array) ? segments.GetArrayLength() - 1 : 0
                         });
-                    } catch { continue; }
+                    } catch (Exception ex) { 
+                        Console.WriteLine($"[API] Skipping flight offer: {ex.Message}");
+                        continue; 
+                    }
                 }
+            }
+            else
+            {
+                Console.WriteLine($"[API] No flight offers found in response. Raw: {content[..Math.Min(300, content.Length)]}");
             }
 
             if (results.Count > 0) cache.Set(cacheKey, results, TimeSpan.FromHours(1));
@@ -197,19 +216,12 @@ public class RapidTravelService(HttpClient httpClient, IConfiguration config, IM
         try
         {
             var (destId, destType) = await ResolveLocationAsync(query, ct);
-            Console.WriteLine($"[API] Searching Hotels in {destId}...");
+            Console.WriteLine($"[API] Searching Hotels: dest_id={destId}, type={destType}, {checkIn:yyyy-MM-dd} to {checkOut:yyyy-MM-dd}...");
 
-            var request = new HttpRequestMessage(HttpMethod.Get, $"https://booking-com15.p.rapidapi.com/api/v1/hotels/searchHotels?dest_id={destId}&search_type={destType}&arrival_date={checkIn:yyyy-MM-dd}&departure_date={checkOut:yyyy-MM-dd}&adults={adults}&children_age=0&room_qty=1&page_number=1&units=metric&temperature_unit=c&languagecode=en-us&currency_code={currency}");
-            request.Headers.Add("X-RapidAPI-Key", _apiKey);
-            request.Headers.Add("X-RapidAPI-Host", "booking-com15.p.rapidapi.com");
+            var content = await CallApiAsync(
+                $"https://booking-com15.p.rapidapi.com/api/v1/hotels/searchHotels?dest_id={destId}&search_type={destType}&arrival_date={checkIn:yyyy-MM-dd}&departure_date={checkOut:yyyy-MM-dd}&adults={adults}&children_age=0&room_qty=1&page_number=1&units=metric&temperature_unit=c&languagecode=en-us&currency_code={currency}",
+                _bookingHost, ct);
 
-            var response = await httpClient.SendAsync(request, ct);
-            if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests) {
-                await Task.Delay(2000, ct);
-                response = await httpClient.SendAsync(request, ct);
-            }
-
-            var content = await response.Content.ReadAsStringAsync(ct);
             var json = JsonSerializer.Deserialize<JsonElement>(content);
             var results = new List<HotelSearchResult>();
 
@@ -222,6 +234,7 @@ public class RapidTravelService(HttpClient httpClient, IConfiguration config, IM
 
             if (list.ValueKind == JsonValueKind.Array)
             {
+                Console.WriteLine($"[API] Parsing {list.GetArrayLength()} hotels...");
                 foreach (var item in list.EnumerateArray().Take(40))
                 {
                     try {
@@ -230,9 +243,22 @@ public class RapidTravelService(HttpClient httpClient, IConfiguration config, IM
                         
                         decimal price = 0;
                         if (item.TryGetProperty("priceBreakdown", out var pb))
-                            price = pb.GetProperty("grossAmount").GetProperty("value").GetDecimal();
+                        {
+                            if (pb.TryGetProperty("grossAmount", out var ga) && ga.TryGetProperty("value", out var gav))
+                                price = gav.GetDecimal();
+                            else if (pb.TryGetProperty("grossPrice", out var gp) && gp.TryGetProperty("value", out var gpv))
+                                price = gpv.GetDecimal();
+                        }
                         else if (item.TryGetProperty("price", out var pr) && pr.ValueKind == JsonValueKind.Number)
                             price = pr.GetDecimal();
+
+                        // Get hotel ID safely
+                        int hotelId = 0;
+                        if (item.TryGetProperty("hotel_id", out var hid))
+                        {
+                            if (hid.ValueKind == JsonValueKind.Number) hotelId = hid.GetInt32();
+                            else if (hid.ValueKind == JsonValueKind.String && int.TryParse(hid.GetString(), out var parsed)) hotelId = parsed;
+                        }
 
                         results.Add(new HotelSearchResult
                         {
@@ -243,11 +269,19 @@ public class RapidTravelService(HttpClient httpClient, IConfiguration config, IM
                             Currency = currency,
                             ImageUrl = prop.TryGetProperty("photoUrls", out var photos) && photos.GetArrayLength() > 0 ? photos[0].GetString() : null,
                             Rating = prop.TryGetProperty("reviewScore", out var score) ? score.GetDouble() : 4.5,
-                            BookingUrl = $"https://www.booking.com/hotel/xx/{item.GetProperty("hotel_id").GetInt32()}.html"
+                            BookingUrl = hotelId > 0 ? $"https://www.booking.com/hotel/xx/{hotelId}.html" : "https://www.booking.com"
                         });
-                    } catch { continue; }
+                    } catch (Exception ex) { 
+                        Console.WriteLine($"[API] Skipping hotel: {ex.Message}");
+                        continue; 
+                    }
                 }
             }
+            else
+            {
+                Console.WriteLine($"[API] No hotels found in response. Raw: {content[..Math.Min(300, content.Length)]}");
+            }
+
             if (results.Count > 0) cache.Set(cacheKey, results, TimeSpan.FromHours(1));
             Console.WriteLine($"[API] Found {results.Count} hotels.");
             return results;
@@ -263,12 +297,10 @@ public class RapidTravelService(HttpClient httpClient, IConfiguration config, IM
     {
         try
         {
-            var request = new HttpRequestMessage(HttpMethod.Get, $"https://booking-com15.p.rapidapi.com/api/v1/taxi/searchTaxi?fromLocation={fromLocation}&toLocation={toLocation}&pickupTime={pickupTime:yyyy-MM-dd HH:mm:ss}&currencyCode={currency}");
-            request.Headers.Add("X-RapidAPI-Key", _apiKey);
-            request.Headers.Add("X-RapidAPI-Host", "booking-com15.p.rapidapi.com");
+            var content = await CallApiAsync(
+                $"https://booking-com15.p.rapidapi.com/api/v1/taxi/searchTaxi?fromLocation={Uri.EscapeDataString(fromLocation)}&toLocation={Uri.EscapeDataString(toLocation)}&pickupTime={pickupTime:yyyy-MM-dd HH:mm:ss}&currencyCode={currency}",
+                _bookingHost, ct);
 
-            var response = await httpClient.SendAsync(request, ct);
-            var content = await response.Content.ReadAsStringAsync(ct);
             var json = JsonSerializer.Deserialize<JsonElement>(content);
             var results = new List<TaxiSearchResult>();
 
@@ -304,28 +336,22 @@ public class RapidTravelService(HttpClient httpClient, IConfiguration config, IM
         if (cache.TryGetValue(cacheKey, out List<TrainSearchResult>? cached) && cached != null && cached.Count > 0) return cached;
 
         try
-            {
+        {
             var fromCode = await ResolveTrainStationAsync(sourceStation, ct);
             var toCode = await ResolveTrainStationAsync(destStation, ct);
 
-            Console.WriteLine($"[API] Searching Trains: {fromCode} -> {toCode}...");
+            Console.WriteLine($"[API] Searching Trains: {fromCode} -> {toCode} on {date:yyyy-MM-dd}...");
 
-            var request = new HttpRequestMessage(HttpMethod.Get, $"https://irctc1.p.rapidapi.com/api/v1/searchTrain?sourceStation={fromCode}&destinationStation={toCode}&date={date:yyyy-MM-dd}");
-            request.Headers.Add("X-RapidAPI-Key", _apiKey);
-            request.Headers.Add("X-RapidAPI-Host", "irctc1.p.rapidapi.com");
+            var content = await CallApiAsync(
+                $"https://irctc1.p.rapidapi.com/api/v1/searchTrain?sourceStation={fromCode}&destinationStation={toCode}&date={date:yyyy-MM-dd}",
+                _trainHost, ct);
 
-            var response = await httpClient.SendAsync(request, ct);
-            if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests) {
-                await Task.Delay(2000, ct);
-                response = await httpClient.SendAsync(request, ct);
-            }
-
-            var content = await response.Content.ReadAsStringAsync(ct);
             var data = JsonSerializer.Deserialize<JsonElement>(content);
             var results = new List<TrainSearchResult>();
 
             if (data.TryGetProperty("data", out var list) && list.ValueKind == JsonValueKind.Array)
             {
+                Console.WriteLine($"[API] Parsing {list.GetArrayLength()} trains...");
                 foreach (var item in list.EnumerateArray().Take(20))
                 {
                     results.Add(new TrainSearchResult
@@ -343,6 +369,11 @@ public class RapidTravelService(HttpClient httpClient, IConfiguration config, IM
                     });
                 }
             }
+            else
+            {
+                Console.WriteLine($"[API] No trains found. Raw: {content[..Math.Min(300, content.Length)]}");
+            }
+
             if (results.Count > 0) cache.Set(cacheKey, results, TimeSpan.FromHours(1));
             Console.WriteLine($"[API] Found {results.Count} trains.");
             return results;
