@@ -42,3 +42,9 @@ public class DashboardStatsDto
     public int DestinationsVisited { get; set; }
     public int ReviewCount { get; set; }
 }
+
+public class ChangeRoleRequest
+{
+    [Required, RegularExpression("^(User|Manager|Admin)$", ErrorMessage = "Role must be User, Manager, or Admin.")]
+    public string Role { get; set; } = string.Empty;
+}

@@ -2,6 +2,7 @@ using Trippin.API.DTOs;
 using Trippin.API.Extensions;
 using Trippin.API.Helpers;
 using Trippin.API.Services;
+using Microsoft.EntityFrameworkCore;
 
 namespace Trippin.API;
 
@@ -19,6 +20,7 @@ public static class ApiEndpoints
         MapReviews(api);
         MapItineraries(api);
         MapSearch(api);
+        MapAdmin(api);
     }
 
     static void MapAuth(RouteGroupBuilder api)
@@ -164,7 +166,7 @@ public static class ApiEndpoints
 
             await db.SaveChangesAsync(ct);
             return Results.Ok(new { message = $"Healed {healed} broken images out of {brokenDests.Count} destinations." });
-        }).AllowAnonymous();
+        }).RequireAuthorization("AdminOrManager");
     }
 
     static void MapTrips(RouteGroupBuilder api)
@@ -462,6 +464,82 @@ public static class ApiEndpoints
             var d = DateTime.Parse(date);
             var results = await svc.SearchTrainsAsync(source, destination, d);
             return Results.Ok(results);
+        });
+    }
+
+    static void MapAdmin(RouteGroupBuilder api)
+    {
+        var g = api.MapGroup("/admin").RequireAuthorization("Admin");
+
+        // List all users (Admin only)
+        g.MapGet("/users", async (Trippin.API.Data.AppDbContext db, int page = 1, int pageSize = 20, CancellationToken ct = default) =>
+        {
+            var query = db.Users.AsNoTracking().Where(u => !u.IsDeleted).OrderByDescending(u => u.CreatedAt);
+            var total = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.CountAsync(query, ct);
+            var users = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync(
+                query.Skip((page - 1) * pageSize).Take(pageSize)
+                    .Select(u => new { u.Id, u.Name, u.Email, u.Role, u.AuthProvider, u.CreatedAt }), ct);
+            return Results.Ok(new { total, page, pageSize, users });
+        });
+
+        // Change user role (Admin only)
+        g.MapPatch("/users/{id:int}/role", async (HttpContext ctx, int id, ChangeRoleRequest req, Trippin.API.Data.AppDbContext db, CancellationToken ct) =>
+        {
+            var validRoles = new[] { "User", "Manager", "Admin" };
+            if (!validRoles.Contains(req.Role))
+                return Results.BadRequest(new { error = $"Invalid role. Must be one of: {string.Join(", ", validRoles)}" });
+
+            var adminId = ctx.User.GetUserId();
+            if (adminId == id)
+                return Results.BadRequest(new { error = "Cannot change your own role." });
+
+            var user = await db.Users.FirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted, ct);
+            if (user is null) return Results.NotFound();
+
+            user.Role = req.Role;
+            user.UpdatedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(new { user.Id, user.Name, user.Email, user.Role });
+        });
+
+        // Delete any user (Admin only)
+        g.MapDelete("/users/{id:int}", async (HttpContext ctx, int id, Trippin.API.Data.AppDbContext db, CancellationToken ct) =>
+        {
+            var adminId = ctx.User.GetUserId();
+            if (adminId == id)
+                return Results.BadRequest(new { error = "Cannot delete yourself." });
+
+            var user = await db.Users.FirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted, ct);
+            if (user is null) return Results.NotFound();
+
+            user.IsDeleted = true;
+            user.UpdatedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync(ct);
+            return Results.NoContent();
+        });
+
+        // View all bookings across all users (Admin + Manager)
+        api.MapGet("/admin/bookings", async (Trippin.API.Data.AppDbContext db, int page = 1, int pageSize = 20, CancellationToken ct = default) =>
+        {
+            var query = db.Bookings.AsNoTracking().Where(b => !b.IsDeleted).OrderByDescending(b => b.CreatedAt);
+            var total = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.CountAsync(query, ct);
+            var bookings = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync(
+                query.Skip((page - 1) * pageSize).Take(pageSize)
+                    .Select(b => new { b.Id, b.UserId, b.TripId, b.Type, b.Provider, b.TotalPrice, b.Currency, b.Status, b.CreatedAt }), ct);
+            return Results.Ok(new { total, page, pageSize, bookings });
+        }).RequireAuthorization("AdminOrManager");
+
+        // Platform stats (Admin only)
+        g.MapGet("/stats", async (Trippin.API.Data.AppDbContext db, CancellationToken ct) =>
+        {
+            var totalUsers = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.CountAsync(db.Users.Where(u => !u.IsDeleted), ct);
+            var totalTrips = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.CountAsync(db.Trips.Where(t => !t.IsDeleted), ct);
+            var totalBookings = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.CountAsync(db.Bookings.Where(b => !b.IsDeleted), ct);
+            var totalRevenue = await db.Bookings.Where(b => !b.IsDeleted && b.Status != "Cancelled").SumAsync(b => (decimal?)b.TotalPrice, ct) ?? 0;
+            var totalDestinations = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.CountAsync(db.Destinations.Where(d => !d.IsDeleted), ct);
+            var totalReviews = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.CountAsync(db.Reviews.Where(r => !r.IsDeleted), ct);
+
+            return Results.Ok(new { totalUsers, totalTrips, totalBookings, totalRevenue, totalDestinations, totalReviews });
         });
     }
 }
