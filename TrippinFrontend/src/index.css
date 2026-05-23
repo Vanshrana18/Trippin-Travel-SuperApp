@@ -5685,6 +5685,771 @@ html {
   margin-bottom: 24px;
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   COMPREHENSIVE MOBILE RESPONSIVENESS FIX
+   Ensures the app adjusts automatically to every screen size
+   ═══════════════════════════════════════════════════════════════ */
 
+/* ─── Global overflow prevention ─── */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
 
+/* ─── Fluid typography for smaller viewports ─── */
+@media (max-width: 768px) {
+  :root {
+    --text-5xl: 2.5rem;
+    --text-6xl: 3rem;
+    --text-7xl: 3.5rem;
+    --nav-height: 64px;
+  }
+}
 
+@media (max-width: 480px) {
+  :root {
+    --text-4xl: 2rem;
+    --text-5xl: 2.25rem;
+    --text-6xl: 2.5rem;
+    --text-7xl: 2.75rem;
+    --text-3xl: 1.5rem;
+  }
+}
+
+/* ─── Container padding on mobile ─── */
+@media (max-width: 480px) {
+  .container {
+    padding: 0 var(--space-3);
+  }
+}
+
+/* ─── Navbar mobile fixes ─── */
+@media (max-width: 480px) {
+  .navbar-inner {
+    padding: 0 var(--space-3);
+  }
+  .navbar-brand {
+    font-size: var(--text-base);
+  }
+  .navbar-brand-icon {
+    font-size: var(--text-lg);
+  }
+  .navbar-actions {
+    gap: var(--space-2);
+  }
+}
+
+/* ─── Hero section mobile ─── */
+@media (max-width: 768px) {
+  .hero {
+    min-height: auto;
+  }
+  .hero-content {
+    padding: var(--space-10) var(--space-4);
+    gap: var(--space-8);
+  }
+  .hero-badge {
+    margin-bottom: var(--space-4);
+    font-size: 10px;
+  }
+  .hero-description {
+    font-size: var(--text-base);
+    margin-bottom: var(--space-6);
+  }
+  .hero-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  .hero-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .hero-stats {
+    flex-wrap: wrap;
+    gap: var(--space-6);
+    margin-top: var(--space-8);
+    padding-top: var(--space-6);
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-content {
+    padding: var(--space-8) var(--space-3);
+  }
+  .hero-stats {
+    gap: var(--space-4);
+  }
+  .hero-stat-value {
+    font-size: var(--text-xl);
+  }
+}
+
+/* ─── CTA Banner mobile ─── */
+@media (max-width: 768px) {
+  .cta-banner {
+    padding: var(--space-10) var(--space-6);
+    border-radius: var(--radius-xl);
+  }
+  .cta-banner-title {
+    font-size: var(--text-3xl);
+  }
+  .cta-banner-description {
+    font-size: var(--text-base);
+  }
+}
+
+@media (max-width: 480px) {
+  .cta-banner {
+    padding: var(--space-8) var(--space-4);
+    margin: 0 calc(-1 * var(--space-3));
+    border-radius: var(--radius-lg);
+  }
+  .cta-banner-title {
+    font-size: var(--text-2xl);
+  }
+}
+
+/* ─── Section mobile ─── */
+@media (max-width: 768px) {
+  .section {
+    padding: var(--space-12) 0;
+  }
+  .section-header {
+    margin-bottom: var(--space-8);
+  }
+  .section-description {
+    font-size: var(--text-base);
+  }
+}
+
+/* ─── Discover page mobile ─── */
+@media (max-width: 768px) {
+  .discover-page {
+    padding: var(--space-6) 0 var(--space-12);
+  }
+  .discover-title {
+    font-size: var(--text-3xl);
+  }
+  .discover-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .discover-search-premium {
+    min-width: 0;
+    width: 100%;
+  }
+  .discover-categories {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: var(--space-2);
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .discover-categories::-webkit-scrollbar {
+    display: none;
+  }
+  .category-pill, .category-pill-premium {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .discover-sort-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+}
+
+@media (max-width: 480px) {
+  .discover-title {
+    font-size: var(--text-2xl);
+  }
+}
+
+/* ─── Destination detail page mobile ─── */
+@media (max-width: 480px) {
+  .destination-hero {
+    height: 240px;
+  }
+  .destination-hero-title {
+    font-size: var(--text-2xl);
+  }
+  .destination-hero-content {
+    bottom: var(--space-6);
+    padding: 0 var(--space-4);
+  }
+  .destination-card-section {
+    padding: var(--space-5);
+  }
+  .destination-info-card {
+    padding: var(--space-4);
+  }
+}
+
+/* ─── Trip detail page mobile ─── */
+@media (max-width: 768px) {
+  .trip-detail-header {
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+  .trip-detail-title {
+    font-size: var(--text-2xl);
+  }
+  .trip-detail-meta {
+    flex-wrap: wrap;
+    gap: var(--space-3);
+  }
+}
+
+@media (max-width: 480px) {
+  .trip-detail-title {
+    font-size: var(--text-xl);
+  }
+}
+
+/* ─── Tabs horizontal scroll on mobile ─── */
+@media (max-width: 768px) {
+  .tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .tab-btn {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+}
+
+/* ─── Booking cards mobile ─── */
+@media (max-width: 480px) {
+  .booking-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+  .booking-right {
+    text-align: left;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid var(--glass-border);
+    padding-top: var(--space-3);
+  }
+}
+
+/* ─── Itinerary mobile ─── */
+@media (max-width: 480px) {
+  .itinerary-day-header {
+    padding: var(--space-3) var(--space-4);
+  }
+  .itinerary-items {
+    padding: 0 var(--space-4) var(--space-4);
+  }
+  .itinerary-item {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  .itinerary-time {
+    min-width: auto;
+  }
+}
+
+/* ─── Search page mobile ─── */
+@media (max-width: 768px) {
+  .search-hero {
+    padding: var(--space-16) 0 var(--space-20);
+  }
+  .mega-hero {
+    padding-bottom: 80px;
+  }
+  .mega-search-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .mega-search-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .mega-tab {
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding: 8px 14px;
+    font-size: var(--text-sm);
+  }
+  .search-form-wrapper {
+    padding: var(--space-4);
+  }
+  .search-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+  .search-tab {
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-size: var(--text-sm);
+    padding: var(--space-3);
+  }
+}
+
+@media (max-width: 480px) {
+  .search-hero {
+    padding: var(--space-10) 0 var(--space-16);
+  }
+  .mega-search-widget {
+    padding: 4px;
+    border-radius: var(--radius-xl);
+  }
+  .mega-search-body {
+    padding: 0 8px 8px 8px;
+  }
+  .mega-input-cell input, .mega-input-cell select {
+    font-size: 15px;
+  }
+  .mega-submit-btn {
+    font-size: 16px;
+    padding: 0 24px;
+    height: 52px;
+    min-width: auto;
+  }
+}
+
+/* ─── Search results mobile ─── */
+@media (max-width: 768px) {
+  .results-header-modern {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: 12px 16px;
+  }
+  .results-header-modern h2 {
+    font-size: var(--text-lg);
+  }
+  .search-result-card {
+    flex-direction: column;
+    gap: var(--space-4);
+    padding: var(--space-4);
+  }
+}
+
+/* ─── Flight card mobile ─── */
+@media (max-width: 480px) {
+  .flight-card-modern {
+    padding: 16px;
+    gap: 16px;
+  }
+  .flight-price-huge {
+    font-size: 22px;
+  }
+  .time-point strong {
+    font-size: 18px;
+  }
+}
+
+/* ─── Hotel card mobile ─── */
+@media (max-width: 480px) {
+  .hotel-card-content {
+    flex-direction: column;
+    padding: 16px;
+    gap: 16px;
+  }
+  .hotel-card-price-action {
+    align-items: flex-start;
+    flex-direction: row;
+    justify-content: space-between;
+    border-top: 1px solid var(--glass-border);
+    padding-top: 16px;
+  }
+  .price-block {
+    text-align: left;
+    margin-bottom: 0;
+  }
+  .price-val {
+    font-size: 22px;
+  }
+  .hotel-main-info h3 {
+    font-size: 18px;
+  }
+  .hotels-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ─── Taxi card mobile ─── */
+@media (max-width: 480px) {
+  .taxi-card-alt {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-4);
+  }
+  .taxi-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+  .taxi-meta {
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+  .taxi-price {
+    margin-left: 0;
+    margin-top: var(--space-2);
+  }
+}
+
+/* ─── Auth page mobile ─── */
+@media (max-width: 768px) {
+  .auth-form-panel {
+    padding: var(--space-6) var(--space-4);
+  }
+  .auth-form-container {
+    max-width: 100%;
+  }
+  .auth-social-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-brand-title {
+    font-size: var(--text-xl);
+  }
+  .auth-visual-title {
+    font-size: var(--text-2xl);
+  }
+}
+
+/* ─── Profile page mobile ─── */
+@media (max-width: 480px) {
+  .profile-avatar-large {
+    width: 72px;
+    height: 72px;
+    font-size: var(--text-2xl);
+  }
+  .profile-info h1 {
+    font-size: var(--text-2xl);
+  }
+  .profile-form-section {
+    padding: var(--space-5);
+  }
+}
+
+/* ─── Bookings page mobile ─── */
+@media (max-width: 480px) {
+  .bookings-header h1 {
+    font-size: var(--text-2xl);
+  }
+}
+
+/* ─── Trips page mobile ─── */
+@media (max-width: 480px) {
+  .trips-header-left h1 {
+    font-size: var(--text-2xl);
+  }
+}
+
+/* ─── Footer mobile ─── */
+@media (max-width: 768px) {
+  .footer {
+    padding: var(--space-12) 0 var(--space-6);
+    margin-top: var(--space-16);
+  }
+  .footer-bottom {
+    flex-direction: column;
+    gap: var(--space-3);
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .footer-inner {
+    gap: var(--space-6);
+  }
+  .footer-brand {
+    font-size: var(--text-xl);
+  }
+}
+
+/* ─── Modals mobile ─── */
+@media (max-width: 480px) {
+  .modal-overlay {
+    padding: var(--space-3);
+    align-items: flex-end;
+  }
+  .modal {
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    max-height: 85vh;
+  }
+  .modal-sm, .modal-md, .modal-lg {
+    max-width: 100%;
+  }
+  .modal-header {
+    padding: var(--space-4) var(--space-4) var(--space-3);
+  }
+  .modal-body {
+    padding: var(--space-4);
+  }
+  .modal-footer {
+    padding: var(--space-3) var(--space-4) var(--space-4);
+    flex-direction: column;
+  }
+  .modal-footer .btn {
+    width: 100%;
+  }
+}
+
+/* ─── Date picker mobile ─── */
+@media (max-width: 480px) {
+  .custom-datepicker-dropdown {
+    width: calc(100vw - 32px);
+    left: 50%;
+    transform: translateX(-50%);
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    z-index: 1100;
+  }
+  .custom-select-dropdown {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    z-index: 1100;
+    max-height: 50vh;
+    overflow-y: auto;
+  }
+}
+
+/* ─── Currency selector mobile ─── */
+@media (max-width: 480px) {
+  .currency-selector-wrapper {
+    margin-right: var(--space-2);
+  }
+  .currency-toggle {
+    padding: 6px 10px;
+    font-size: 10px;
+  }
+  .currency-dropdown {
+    width: 180px;
+    right: -8px;
+  }
+}
+
+/* ─── Map container mobile ─── */
+@media (max-width: 480px) {
+  .location-map-container {
+    height: 200px;
+  }
+}
+
+/* ─── Weather widget mobile ─── */
+@media (max-width: 480px) {
+  .weather-widget {
+    padding: var(--space-4);
+  }
+  .weather-temp-value {
+    font-size: var(--text-3xl);
+  }
+}
+
+/* ─── Travel stats grid mobile ─── */
+@media (max-width: 480px) {
+  .travel-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-3);
+  }
+  .travel-stat-card {
+    padding: var(--space-5);
+  }
+  .travel-stat-value {
+    font-size: var(--text-2xl);
+  }
+}
+
+/* ─── Public profile mobile ─── */
+@media (max-width: 480px) {
+  .public-profile-hero {
+    padding: var(--space-12) 0;
+  }
+  .public-profile-avatar {
+    width: 80px;
+    height: 80px;
+  }
+  .public-profile-name {
+    font-size: var(--text-2xl);
+  }
+}
+
+/* ─── 404 Not Found mobile ─── */
+@media (max-width: 480px) {
+  .not-found-code {
+    font-size: 5rem;
+  }
+  .not-found-title {
+    font-size: var(--text-xl);
+  }
+  .not-found-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  .not-found-actions .btn {
+    width: 100%;
+  }
+}
+
+/* ─── Stat cards mobile ─── */
+@media (max-width: 480px) {
+  .stat-card {
+    padding: var(--space-4);
+  }
+  .stat-card-value {
+    font-size: var(--text-xl);
+  }
+  .stat-card-icon {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+/* ─── Destination card mobile ─── */
+@media (max-width: 480px) {
+  .destination-card-image {
+    height: 180px;
+  }
+  .destination-card-body {
+    padding: var(--space-4);
+  }
+  .destination-card-name {
+    font-size: var(--text-lg);
+  }
+}
+
+/* ─── Trip card mobile ─── */
+@media (max-width: 480px) {
+  .trip-card-image {
+    height: 150px;
+  }
+  .trip-card-body {
+    padding: var(--space-4);
+  }
+}
+
+/* ─── Very small phones (320px - e.g. iPhone SE) ─── */
+@media (max-width: 360px) {
+  :root {
+    --text-4xl: 1.75rem;
+    --text-3xl: 1.375rem;
+    --text-2xl: 1.25rem;
+    --text-xl: 1.125rem;
+  }
+
+  .container {
+    padding: 0 var(--space-2);
+  }
+
+  .navbar-inner {
+    padding: 0 var(--space-2);
+  }
+
+  .hero-content {
+    padding: var(--space-6) var(--space-2);
+  }
+
+  .btn {
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--text-xs);
+  }
+
+  .btn-lg {
+    padding: var(--space-3) var(--space-6);
+    font-size: var(--text-sm);
+  }
+
+  .mega-search-tabs {
+    gap: var(--space-1);
+    padding: 4px 8px;
+  }
+
+  .mega-tab {
+    padding: 6px 12px;
+    font-size: var(--text-xs);
+  }
+
+  .category-pill-premium {
+    padding: 8px 14px;
+    font-size: 12px;
+  }
+
+  .category-pill-premium .cat-icon {
+    width: 22px;
+    height: 22px;
+  }
+
+  .flight-price-huge {
+    font-size: 18px;
+  }
+
+  .price-val {
+    font-size: 18px;
+  }
+}
+
+/* ─── Landscape phone fixes ─── */
+@media (max-height: 500px) and (orientation: landscape) {
+  .hero {
+    min-height: auto;
+  }
+  .hero-content {
+    padding: var(--space-6) var(--space-4);
+  }
+  .search-hero {
+    padding: var(--space-8) 0 var(--space-12);
+  }
+  .auth-form-panel {
+    min-height: auto;
+    padding: var(--space-4);
+  }
+}
+
+/* ─── Ensure all images/iframes fit container ─── */
+img, video, iframe, svg {
+  max-width: 100%;
+}
+
+/* ─── Prevent text overflow everywhere ─── */
+h1, h2, h3, h4, h5, h6 {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+p, span, a, li {
+  overflow-wrap: break-word;
+}
+
+/* ─── Touch-friendly tap targets ─── */
+@media (max-width: 768px) {
+  .btn, button, a, .category-pill, .category-pill-premium, .tab-btn, 
+  .pagination-btn, .search-tab, .mega-tab, .trip-type-label {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* But keep icon buttons compact */
+  .btn-icon, .modal-close, .navbar-mobile-toggle, 
+  .search-clear-btn-modern, .mega-swap-btn {
+    min-width: 36px;
+    min-height: 36px;
+  }
+}
