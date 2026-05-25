@@ -15,6 +15,8 @@ import Textarea from '../components/shared/Textarea';
 import Select from '../components/shared/Select';
 import Skeleton from '../components/shared/Skeleton';
 import EmptyState from '../components/shared/EmptyState';
+import QueryErrorState from '../components/shared/QueryErrorState';
+import BookingLedgerCard from '../components/bookings/BookingLedgerCard';
 import { formatDate, formatCurrency } from '../utils/formatters';
 
 const BOOKING_TYPE_ICONS = {
@@ -33,9 +35,9 @@ const ACTIVITY_TYPE_COLORS = {
 
 export default function TripDetailPage() {
   const { id } = useParams();
-  const { data: trip, isLoading } = useTrip(id);
-  const { data: bookingsData } = useTripBookings(id);
-  const { data: itinerariesData } = useTripItineraries(id);
+  const { data: trip, isLoading, isError, error, refetch } = useTrip(id);
+  const { data: bookingsData, isError: bookingsError, error: bookingsErr, refetch: refetchBookings } = useTripBookings(id);
+  const { data: itinerariesData, isError: itinerariesError, error: itinerariesErr, refetch: refetchItineraries } = useTripItineraries(id);
   const createBooking = useCreateBooking();
   const updateBookingStatus = useUpdateBookingStatus();
   const cancelBooking = useCancelBooking();
@@ -61,7 +63,7 @@ export default function TripDetailPage() {
   const itineraries = Array.isArray(itinerariesData) ? itinerariesData : itinerariesData?.items || itinerariesData?.data || [];
   const tripDestinations = trip?.destinations || trip?.tripDestinations || [];
 
-  if (isLoading) return (
+  if (isLoading && !trip) return (
     <div className="container" style={{ paddingTop: '120px' }}>
       <Skeleton variant="text" width="60%" height={48} />
       <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
@@ -74,7 +76,25 @@ export default function TripDetailPage() {
       </div>
     </div>
   );
-  if (!trip) return <EmptyState icon={MapPin} title="Trip not found" />;
+
+  if (isError) {
+    return (
+      <div className="container" style={{ paddingTop: '120px' }}>
+        <QueryErrorState
+          title="Failed to load trip"
+          message={error?.response?.data?.error || error?.message || 'Could not load this trip.'}
+          onRetry={() => refetch()}
+        />
+        <div style={{ textAlign: 'center', marginTop: 'var(--space-4)' }}>
+          <Link to="/trips">
+            <Button variant="ghost">Back to trips</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (!trip) return <EmptyState icon={MapPin} title="Trip not found" description="This trip may have been deleted or you do not have access." />;
 
   const formatTime = (t) => {
     if (!t) return '';
@@ -225,7 +245,13 @@ export default function TripDetailPage() {
                 <Plus size={14} /> Add Booking
               </Button>
             </div>
-            {bookings.length === 0 ? (
+            {bookingsError ? (
+              <QueryErrorState
+                title="Failed to load bookings"
+                message={bookingsErr?.response?.data?.error || bookingsErr?.message || 'Could not load trip bookings.'}
+                onRetry={() => refetchBookings()}
+              />
+            ) : bookings.length === 0 ? (
               <EmptyState
                 icon={Package}
                 title="No bookings yet"
@@ -233,36 +259,33 @@ export default function TripDetailPage() {
                 action={<Button variant="primary" onClick={() => setShowBookingModal(true)}><Plus size={14} /> Add First Booking</Button>}
               />
             ) : (
-              <div className="booking-cards">
+              <div className="booking-cards tw-flex tw-flex-col tw-gap-4">
                 {bookings.map((booking) => {
                   const TypeIcon = BOOKING_TYPE_ICONS[booking.type] || Package;
+                  const dateStr = [
+                    booking.checkInDate && formatDate(booking.checkInDate),
+                    booking.checkOutDate && formatDate(booking.checkOutDate),
+                  ].filter(Boolean).join(' — ');
+
                   return (
-                    <div key={booking.id} className="booking-card">
-                      <div className={`booking-type-icon ${booking.type?.toLowerCase()}`}>
-                        <TypeIcon size={20} />
-                      </div>
-                      <div className="booking-info">
-                        <div className="booking-title">{booking.title}</div>
-                        {booking.provider && <div className="booking-provider">{booking.provider}</div>}
-                        <div className="booking-dates">
-                          {booking.checkInDate && formatDate(booking.checkInDate)}
-                          {booking.checkOutDate && ` — ${formatDate(booking.checkOutDate)}`}
-                          {booking.confirmationNumber && (
-                            <span style={{ fontFamily: 'var(--font-mono)', marginLeft: 'var(--space-2)' }}>#{booking.confirmationNumber}</span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="booking-right">
-                        <div className="booking-price">{formatCurrency(booking.totalPrice, booking.currency || trip.currency)}</div>
-                        <span className={`booking-status ${booking.status?.toLowerCase()}`}>{booking.status}</span>
-                        {booking.status === 'Pending' && (
-                          <div style={{ display: 'flex', gap: 'var(--space-1)', marginTop: 'var(--space-2)', justifyContent: 'flex-end' }}>
-                            <Button variant="ghost" size="sm" onClick={() => updateBookingStatus.mutate({ id: booking.id, status: 'Confirmed' })}>Confirm</Button>
-                            <Button variant="ghost" size="sm" onClick={() => cancelBooking.mutate(booking.id)} style={{ color: 'var(--danger)' }}>Cancel</Button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                    <BookingLedgerCard
+                      key={booking.id}
+                      booking={booking}
+                      typeIcon={TypeIcon}
+                      formattedPrice={formatCurrency(booking.totalPrice, booking.currency || trip.currency)}
+                      formattedDates={dateStr}
+                      showTrip={false}
+                      onConfirm={
+                        booking.status === 'Pending'
+                          ? () => updateBookingStatus.mutate({ id: booking.id, status: 'Confirmed' })
+                          : undefined
+                      }
+                      onCancel={
+                        booking.status === 'Pending'
+                          ? () => cancelBooking.mutate(booking.id)
+                          : undefined
+                      }
+                    />
                   );
                 })}
               </div>
@@ -278,7 +301,13 @@ export default function TripDetailPage() {
                 <Sparkles size={14} /> Generate AI Itinerary
               </Button>
             </div>
-            {itineraries.length === 0 ? (
+            {itinerariesError ? (
+              <QueryErrorState
+                title="Failed to load itineraries"
+                message={itinerariesErr?.response?.data?.error || itinerariesErr?.message || 'Could not load itineraries for this trip.'}
+                onRetry={() => refetchItineraries()}
+              />
+            ) : itineraries.length === 0 ? (
               <EmptyState
                 icon={Sparkles}
                 title="No itinerary yet"

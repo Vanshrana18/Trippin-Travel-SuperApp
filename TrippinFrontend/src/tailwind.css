@@ -1,0 +1,20 @@
+@import "tailwindcss" prefix(tw);
+
+/* Tailwind island — maps to Trippin design tokens (prefixed tw-* utilities) */
+@theme {
+  --color-terra-400: #ff5a1f;
+  --color-terra-500: #e63b00;
+  --color-ocean-400: #00bcd4;
+  --color-surface: #09090b;
+  --color-surface-raised: #18181b;
+  --color-surface-border: rgba(255, 255, 255, 0.08);
+  --color-ink: #ffffff;
+  --color-ink-muted: #a1a1aa;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+}

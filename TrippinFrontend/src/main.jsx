@@ -6,6 +6,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { CurrencyProvider } from './contexts/CurrencyContext';
 import App from './App';
 import './index.css';
+import './tailwind.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {

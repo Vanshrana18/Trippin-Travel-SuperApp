@@ -5,14 +5,17 @@ export default function StaggerContainer({
   staggerDelay = 0.08,
   delay = 0,
   style = {},
+  /** When true, animates immediately instead of waiting for scroll into view */
+  immediate = false,
 }) {
   return (
     <motion.div
       className={className}
       style={style}
       initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, amount: 0.1 }}
+      animate={immediate ? 'visible' : undefined}
+      whileInView={immediate ? undefined : 'visible'}
+      viewport={immediate ? undefined : { once: true, amount: 0.1 }}
       variants={{
         hidden: {},
         visible: {

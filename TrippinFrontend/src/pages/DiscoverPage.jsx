@@ -5,6 +5,7 @@ import { Search, X, SlidersHorizontal, TrendingUp, Globe, Palmtree, Mountain, Bu
 import DestinationCard from '../components/shared/DestinationCard';
 import Skeleton from '../components/shared/Skeleton';
 import EmptyState from '../components/shared/EmptyState';
+import QueryErrorState from '../components/shared/QueryErrorState';
 import Button from '../components/shared/Button';
 import ScrollReveal from '../components/animations/ScrollReveal';
 import StaggerContainer, { StaggerItem } from '../components/animations/StaggerContainer';
@@ -39,7 +40,7 @@ export default function DiscoverPage() {
   // Main search query — only fires when user has a search or category filter
   const isFiltering = !!(debouncedSearch || category !== 'all');
 
-  const { data, isLoading } = useDestinations({
+  const { data, isLoading, isError: searchError, error: searchErr, refetch: refetchSearch } = useDestinations({
     search: debouncedSearch || undefined,
     category: category !== 'all' ? category : undefined,
     sortBy,
@@ -48,7 +49,13 @@ export default function DiscoverPage() {
   });
 
   // Trending query — fires when no filter is active to populate the default view
-  const { data: trendingData, isLoading: trendingLoading } = useTrendingDestinations(12);
+  const {
+    data: trendingData,
+    isLoading: trendingLoading,
+    isError: trendingError,
+    error: trendingErr,
+    refetch: refetchTrending,
+  } = useTrendingDestinations(12);
 
   const destinations = Array.isArray(data) ? data : data?.items || data?.data || data?.$values || [];
   const totalPages = data?.totalPages || 1;
@@ -60,6 +67,12 @@ export default function DiscoverPage() {
   const displayDestinations = isFiltering ? destinations : trendingList;
   const showLoading = isFiltering ? isLoading : trendingLoading;
   const showPagination = isFiltering && totalPages > 1;
+  const loadFailed = isFiltering ? searchError : trendingError;
+  const loadError = isFiltering ? searchErr : trendingErr;
+  const retryLoad = isFiltering ? refetchSearch : refetchTrending;
+
+  const getErrorMessage = (err) =>
+    err?.response?.data?.error || err?.message || 'Could not load destinations.';
 
   const handleCategoryChange = (cat) => {
     setCategory(cat);
@@ -169,18 +182,32 @@ export default function DiscoverPage() {
               <Skeleton key={i} variant="card" />
             ))}
           </div>
+        ) : loadFailed ? (
+          <QueryErrorState
+            title={isFiltering ? 'Search failed' : 'Could not load trending destinations'}
+            message={getErrorMessage(loadError)}
+            onRetry={() => retryLoad()}
+          />
         ) : displayDestinations.length === 0 ? (
           <ScrollReveal variant="scaleUp">
             <EmptyState
               icon={Search}
               title="No destinations found"
-              description={isFiltering
-                ? "No results in our database — try a different spelling or search for a city/country name."
-                : "Something went wrong loading trending destinations."}
+              description={
+                isFiltering
+                  ? 'No results in our database — try a different spelling or search for a city or country name.'
+                  : 'No trending destinations right now. Try searching for a place instead.'
+              }
               action={
-                <Button variant="secondary" onClick={() => { clearSearch(); setCategory('all'); }}>
-                  Clear Filters
-                </Button>
+                isFiltering ? (
+                  <Button variant="secondary" onClick={() => { clearSearch(); setCategory('all'); }}>
+                    Clear Filters
+                  </Button>
+                ) : (
+                  <Button variant="secondary" onClick={() => setSearchInput('Paris')}>
+                    Search Paris
+                  </Button>
+                )
               }
             />
           </ScrollReveal>

@@ -1,8 +1,11 @@
+import { Link } from 'react-router-dom';
 import { useBookings, useCancelBooking, useUpdateBookingStatus } from '../hooks/useBookings';
-import { Plane, Building, Globe, Compass, Car, Package, CreditCard } from 'lucide-react';
+import { Plane, Building, Globe, Compass, Car, Package, CreditCard, Search } from 'lucide-react';
 import Button from '../components/shared/Button';
 import Skeleton from '../components/shared/Skeleton';
 import EmptyState from '../components/shared/EmptyState';
+import QueryErrorState from '../components/shared/QueryErrorState';
+import BookingLedgerCard from '../components/bookings/BookingLedgerCard';
 import { formatDate, formatCurrency } from '../utils/formatters';
 import ScrollReveal from '../components/animations/ScrollReveal';
 import StaggerContainer, { StaggerItem } from '../components/animations/StaggerContainer';
@@ -13,11 +16,26 @@ const BOOKING_TYPE_ICONS = {
 };
 
 export default function BookingsPage() {
-  const { data, isLoading } = useBookings({ pageSize: 50 });
+  const { data, isLoading, isError, error, refetch } = useBookings({ pageSize: 50 });
   const cancelBooking = useCancelBooking();
   const updateStatus = useUpdateBookingStatus();
 
   const bookings = Array.isArray(data) ? data : data?.items || data?.data || [];
+  if (isError) {
+    const message = error?.response?.data?.error || error?.message || 'Could not load your bookings.';
+    return (
+      <div className="bookings-page">
+        <div className="container" style={{ paddingTop: '120px' }}>
+          <QueryErrorState
+            title="Failed to load bookings"
+            message={message}
+            onRetry={() => refetch()}
+          />
+        </div>
+      </div>
+    );
+  }
+
   if (isLoading) return (
     <div className="container" style={{ paddingTop: '120px' }}>
       <Skeleton variant="text" width="40%" height={40} />
@@ -34,7 +52,7 @@ export default function BookingsPage() {
     <div className="bookings-page">
       <div className="container">
         <ScrollReveal variant="blur">
-          <div className="bookings-header">
+          <div className="bookings-header tw-mb-2">
             <h1>My Bookings</h1>
             <p>All your travel bookings across every trip, in one place.</p>
           </div>
@@ -54,41 +72,49 @@ export default function BookingsPage() {
             />
             <div style={{ position: 'relative', zIndex: 1 }}>
               <ScrollReveal variant="scaleUp">
-                <EmptyState icon={CreditCard} title="No bookings yet" description="When you add bookings to your trips, they'll all appear here." />
+                <EmptyState
+                  icon={CreditCard}
+                  title="No bookings yet"
+                  description="Search for flights or hotels, then save them to a trip — they'll show up here."
+                  action={
+                    <Link to="/search">
+                      <Button variant="primary">
+                        <Search size={16} style={{ marginRight: 8 }} />
+                        Search travel
+                      </Button>
+                    </Link>
+                  }
+                />
               </ScrollReveal>
             </div>
           </div>
         ) : (
-          <StaggerContainer className="booking-cards" staggerDelay={0.06}>
+          <StaggerContainer className="booking-cards tw-flex tw-flex-col tw-gap-4" staggerDelay={0.06} immediate>
             {bookings.map((booking) => {
               const TypeIcon = BOOKING_TYPE_ICONS[booking.type] || Package;
+              const dateStr = [
+                booking.checkInDate && formatDate(booking.checkInDate),
+                booking.checkOutDate && formatDate(booking.checkOutDate),
+              ].filter(Boolean).join(' — ');
+
               return (
                 <StaggerItem key={booking.id}>
-                  <motion.div className="booking-card" whileHover={{ x: 4, rotateY: 1 }}>
-                    <div className={`booking-type-icon ${booking.type?.toLowerCase()}`}>
-                      <TypeIcon size={20} />
-                    </div>
-                    <div className="booking-info">
-                      <div className="booking-title">{booking.title}</div>
-                      {booking.provider && <div className="booking-provider">{booking.provider}</div>}
-                      <div className="booking-dates">
-                        {booking.checkInDate && formatDate(booking.checkInDate)}
-                        {booking.checkOutDate && ` — ${formatDate(booking.checkOutDate)}`}
-                        {booking.confirmationNumber && <span style={{ fontFamily: 'var(--font-mono)', marginLeft: 'var(--space-2)' }}>#{booking.confirmationNumber}</span>}
-                      </div>
-                      {booking.tripTitle && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--ocean-400)', marginTop: 'var(--space-1)' }}>Trip: {booking.tripTitle}</div>}
-                    </div>
-                    <div className="booking-right">
-                      <div className="booking-price">{formatCurrency(booking.totalPrice, booking.currency || 'USD')}</div>
-                      <span className={`booking-status ${booking.status?.toLowerCase()}`}>{booking.status}</span>
-                      {booking.status === 'Pending' && (
-                        <div style={{ display: 'flex', gap: 'var(--space-1)', marginTop: 'var(--space-2)', justifyContent: 'flex-end' }}>
-                          <Button variant="ghost" size="sm" onClick={() => updateStatus.mutate({ id: booking.id, status: 'Confirmed' })}>Confirm</Button>
-                          <Button variant="ghost" size="sm" onClick={() => cancelBooking.mutate(booking.id)} style={{ color: 'var(--danger)' }}>Cancel</Button>
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
+                  <BookingLedgerCard
+                    booking={booking}
+                    typeIcon={TypeIcon}
+                    formattedPrice={formatCurrency(booking.totalPrice, booking.currency || 'USD')}
+                    formattedDates={dateStr}
+                    onConfirm={
+                      booking.status === 'Pending'
+                        ? () => updateStatus.mutate({ id: booking.id, status: 'Confirmed' })
+                        : undefined
+                    }
+                    onCancel={
+                      booking.status === 'Pending'
+                        ? () => cancelBooking.mutate(booking.id)
+                        : undefined
+                    }
+                  />
                 </StaggerItem>
               );
             })}

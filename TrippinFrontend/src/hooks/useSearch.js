@@ -1,78 +1,97 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import api from '../api/axios';
+import { parseHttpSearchError, getEmptyResultsHint } from '../utils/searchErrors';
+
+const VERTICALS = {
+  flights: 'flights',
+  hotels: 'hotels',
+  trains: 'trains',
+  taxis: 'taxis',
+};
+
+async function fetchSearch(endpoint, params) {
+  const { data } = await api.get(endpoint, {
+    params: { ...params, currency: params.currency || 'USD' },
+  });
+  return Array.isArray(data) ? data : [];
+}
 
 export function useSearch() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [warning, setWarning] = useState(null);
   const [results, setResults] = useState({ flights: [], hotels: [], trains: [], taxis: [] });
+  const lastRetryRef = useRef(null);
 
-  const searchFlights = useCallback(async (params) => {
+  const runSearch = useCallback(async (vertical, endpoint, params) => {
     setLoading(true);
     setError(null);
+    setWarning(null);
+
+    const retry = () => runSearch(vertical, endpoint, params);
+    lastRetryRef.current = retry;
+
     try {
-      const response = await api.get('/search/flights', { params: { ...params, currency: params.currency || 'USD' } });
-      setResults(prev => ({ ...prev, flights: response.data }));
-      return response.data;
+      const data = await fetchSearch(endpoint, params);
+      setResults((prev) => ({ ...prev, [vertical]: data }));
+
+      if (data.length === 0) {
+        setWarning({
+          type: 'empty',
+          message: getEmptyResultsHint(vertical),
+        });
+      }
+
+      return data;
     } catch (err) {
-      setError(err.response?.data?.error || 'Flight search failed');
+      const parsed = parseHttpSearchError(err, VERTICALS[vertical]);
+      setError(parsed.message);
+      setResults((prev) => ({ ...prev, [vertical]: [] }));
       return [];
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const searchHotels = useCallback(async (params) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await api.get('/search/hotels', { params: { ...params, currency: params.currency || 'USD' } });
-      setResults(prev => ({ ...prev, hotels: response.data }));
-      return response.data;
-    } catch (err) {
-      setError(err.response?.data?.error || 'Hotel search failed');
-      return [];
-    } finally {
-      setLoading(false);
-    }
+  const searchFlights = useCallback(
+    (params) => runSearch('flights', '/search/flights', params),
+    [runSearch]
+  );
+
+  const searchHotels = useCallback(
+    (params) => runSearch('hotels', '/search/hotels', params),
+    [runSearch]
+  );
+
+  const searchTrains = useCallback(
+    (params) => runSearch('trains', '/search/trains', params),
+    [runSearch]
+  );
+
+  const searchTaxis = useCallback(
+    (params) => runSearch('taxis', '/search/taxis', params),
+    [runSearch]
+  );
+
+  const retryLastSearch = useCallback(() => {
+    if (lastRetryRef.current) lastRetryRef.current();
   }, []);
 
-  const searchTrains = useCallback(async (params) => {
-    setLoading(true);
+  const clearStatus = useCallback(() => {
     setError(null);
-    try {
-      const response = await api.get('/search/trains', { params: { ...params, currency: params.currency || 'USD' } });
-      setResults(prev => ({ ...prev, trains: response.data }));
-      return response.data;
-    } catch (err) {
-      setError(err.response?.data?.error || 'Train search failed');
-      return [];
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const searchTaxis = useCallback(async (params) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await api.get('/search/taxis', { params: { ...params, currency: params.currency || 'USD' } });
-      setResults(prev => ({ ...prev, taxis: response.data }));
-      return response.data;
-    } catch (err) {
-      setError(err.response?.data?.error || 'Taxi search failed');
-      return [];
-    } finally {
-      setLoading(false);
-    }
+    setWarning(null);
   }, []);
 
   return {
     loading,
     error,
+    warning,
     results,
     searchFlights,
     searchHotels,
     searchTrains,
-    searchTaxis
+    searchTaxis,
+    retryLastSearch,
+    clearStatus,
   };
 }

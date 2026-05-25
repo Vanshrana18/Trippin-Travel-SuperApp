@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Search, Plane, Building, Train, Car, Calendar, Users, MapPin, ArrowRight, Star, ExternalLink, AlertCircle, Clock, ArrowLeftRight, Activity } from 'lucide-react';
+import { useState } from 'react';
+import { Search, Plane, Building, Train, Car, Calendar, Users, MapPin, ArrowRight, Star, ExternalLink, AlertCircle, Clock, ArrowLeftRight, Activity, Sparkles } from 'lucide-react';
 import Button from '../components/shared/Button';
 import ScrollReveal from '../components/animations/ScrollReveal';
 import Skeleton from '../components/shared/Skeleton';
@@ -10,6 +10,14 @@ import { useCurrency } from '../contexts/CurrencyContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import Autocomplete from '../components/shared/Autocomplete';
 import AddToTripModal from '../components/shared/AddToTripModal';
+import SearchStatusBanner from '../components/shared/SearchStatusBanner';
+import SearchTabBar from '../components/search/SearchTabBar';
+import SearchResultsSkeleton from '../components/search/SearchResultsSkeleton';
+import AnimatedResultCard from '../components/search/AnimatedResultCard';
+import SearchResultsHeader from '../components/search/SearchResultsHeader';
+import SearchFilterPanel from '../components/search/SearchFilterPanel';
+import { Badge } from '../components/ui/badge';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 import CustomSelect from '../components/shared/CustomSelect';
 import CustomDatePicker from '../components/shared/CustomDatePicker';
 import { airports, stations } from '../data/autocompleteData';
@@ -27,18 +35,32 @@ const getDates = () => {
 };
 
 export default function SearchPage() {
-  const { loading: isSearching, results, searchFlights, searchHotels, searchTrains, searchTaxis, error } = useSearch();
+  const { loading: isSearching, results, searchFlights, searchHotels, searchTrains, searchTaxis, error, warning, retryLastSearch, clearStatus } = useSearch();
   const { currency } = useCurrency();
+  const reducedMotion = useReducedMotion();
   const [activeTab, setActiveTab] = useState('flights');
   const [hasSearched, setHasSearched] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [highlightCardId, setHighlightCardId] = useState(null);
   
   const { tmwStr, nwStr } = getDates();
   
-  const handleSaveItem = (type, name, data) => {
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    setHasSearched(false);
+    clearStatus();
+  };
+
+  const handleSaveItem = (type, name, data, cardId) => {
+    setHighlightCardId(cardId);
     setSelectedItem({ type, name, data });
     setShowAddModal(true);
+  };
+
+  const handleCloseAddModal = () => {
+    setShowAddModal(false);
+    setHighlightCardId(null);
   };
 
   // Dynamic Initial States
@@ -114,22 +136,31 @@ export default function SearchPage() {
   };
 
   const renderLoader = () => (
-    <motion.div 
-      className="mega-search-loader"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
+    <motion.div
+      key={`loader-${activeTab}`}
+      className="search-loading-panel"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
     >
-      <div className="loader-radar">
-        <Activity size={48} className="radar-icon" color="var(--primary)" />
-        <motion.div 
-          className="radar-sweep"
-          animate={{ rotate: 360 }}
-          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-        />
-      </div>
-      <h3>Scanning Global Providers...</h3>
-      <p>Comparing prices across hundreds of airlines and partners for the best rates.</p>
+      {!reducedMotion && (
+        <motion.div
+          className="mega-search-loader mega-search-loader--compact"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div className="loader-radar">
+            <Activity size={36} className="radar-icon" color="var(--primary)" />
+            <motion.div
+              className="radar-sweep"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+            />
+          </div>
+          <p className="search-loading-caption">Searching {activeTab}…</p>
+        </motion.div>
+      )}
+      <SearchResultsSkeleton variant={activeTab} />
     </motion.div>
   );
 
@@ -187,25 +218,20 @@ export default function SearchPage() {
       </div>
 
       <div className="container" style={{ marginTop: '-80px', position: 'relative', zIndex: 10 }}>
-        <div className="mega-search-widget">
+        <div className="mega-search-widget tw-rounded-3xl tw-ring-1 tw-ring-white/10">
           {/* Tabs */}
-          <div className="mega-search-tabs">
-            <button className={`mega-tab ${activeTab === 'flights' ? 'active' : ''}`} onClick={() => { setActiveTab('flights'); setHasSearched(false); }}>
-              <Plane size={18} /> Flights
-            </button>
-            <button className={`mega-tab ${activeTab === 'hotels' ? 'active' : ''}`} onClick={() => { setActiveTab('hotels'); setHasSearched(false); }}>
-              <Building size={18} /> Hotels
-            </button>
-            <button className={`mega-tab ${activeTab === 'trains' ? 'active' : ''}`} onClick={() => { setActiveTab('trains'); setHasSearched(false); }}>
-              <Train size={18} /> Trains
-            </button>
-            <button className={`mega-tab ${activeTab === 'taxis' ? 'active' : ''}`} onClick={() => { setActiveTab('taxis'); setHasSearched(false); }}>
-              <Car size={18} /> Taxis
-            </button>
-          </div>
+          <SearchTabBar activeTab={activeTab} onTabChange={handleTabChange} />
 
           {/* Forms */}
           <div className="mega-search-body">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={reducedMotion ? false : { opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={reducedMotion ? undefined : { opacity: 0, y: -8 }}
+                transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+              >
               {activeTab === 'flights' && (
                 <div style={{ marginBottom: '16px', display: 'flex', gap: '16px' }}>
                   <label className={`trip-type-label ${tripType === 'round' ? 'active' : ''}`} onClick={() => setTripType('round')}>
@@ -397,6 +423,8 @@ export default function SearchPage() {
                   </button>
                 </form>
               )}
+              </motion.div>
+            </AnimatePresence>
           </div>
         </div>
       </div>
@@ -410,108 +438,59 @@ export default function SearchPage() {
             </motion.div>
           ) : error ? (
             <motion.div key="error" className="search-error-state" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <AlertCircle size={48} color="var(--danger)" />
-              <h3>Search Encountered an Error</h3>
-              <p style={{ color: 'var(--danger)', fontWeight: 500 }}>{error}</p>
-              <p className="text-sm mt-2">
-                Ensure you are using valid IATA codes for flights (e.g., JFK) or Station Codes for trains.
+              <SearchStatusBanner type="error" message={error} onRetry={retryLastSearch} />
+              <p className="text-sm mt-2" style={{ textAlign: 'center', color: 'var(--ink-muted)', marginTop: 'var(--space-4)' }}>
+                Tip: use 3-letter airport codes for flights (DEL, JFK) and station codes for trains (NDLS, BCT).
               </p>
             </motion.div>
           ) : hasSearched ? (
-            <motion.div 
+            <motion.div
+              key={`results-${activeTab}`}
               className="search-results-container"
-              initial={{ opacity: 0, y: 40 }}
+              initial={reducedMotion ? false : { opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
+              exit={reducedMotion ? undefined : { opacity: 0, y: -12 }}
+              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
             >
-              {error && (
-                <div className="search-error-alert">
-                  <AlertCircle size={20} />
-                  <span>{error}</span>
-                </div>
+              {warning && (
+                <SearchStatusBanner type="warning" message={warning.message} onRetry={retryLastSearch} />
               )}
-              
-              <div className="results-sidebar">
-                <div className="filter-card">
-                  <h3>Filters</h3>
-                  
-                  {/* Flight Specific Filters */}
-                  {activeTab === 'flights' && (
-                    <div className="filter-group">
-                      <h4>Stops</h4>
-                      <label>
-                        <input type="checkbox" checked={filters.stops.includes('0')} onChange={() => toggleStopFilter('0')} /> Non-stop
-                      </label>
-                      <label>
-                        <input type="checkbox" checked={filters.stops.includes('1')} onChange={() => toggleStopFilter('1')} /> 1 Stop
-                      </label>
-                      <label>
-                        <input type="checkbox" checked={filters.stops.includes('2+')} onChange={() => toggleStopFilter('2+')} /> 2+ Stops
-                      </label>
-                    </div>
-                  )}
 
-                  {/* Hotel Specific Filters */}
-                  {activeTab === 'hotels' && (
-                    <div className="filter-group">
-                      <h4>Star Rating</h4>
-                      {[5, 4, 3, 2].map(star => (
-                        <label key={star}>
-                          <input type="checkbox" defaultChecked /> {star} Stars
-                        </label>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Train Specific Filters */}
-                  {activeTab === 'trains' && (
-                    <div className="filter-group">
-                      <h4>Coach Class</h4>
-                      {['1AC', '2AC', '3AC', 'SL'].map(c => (
-                        <label key={c}>
-                          <input type="checkbox" defaultChecked /> {c}
-                        </label>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="filter-group">
-                    <h4>Max Price: {formatCurrency(filters.maxPrice, currency)}</h4>
-                    <input 
-                      type="range" 
-                      min="0" 
-                      max="1000000" 
-                      step="5000"
-                      value={filters.maxPrice}
-                      onChange={(e) => setFilters(prev => ({ ...prev, maxPrice: parseInt(e.target.value) }))}
-                      className="modern-range-slider"
-                    />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginTop: '4px' }}>
-                      <span>0</span><span>{formatCurrency(1000000, currency)}+</span>
-                    </div>
-                  </div>
-                  <Button variant="ghost" size="sm" onClick={() => setFilters({ stops: ['0', '1', '2+'], maxPrice: 1000000 })} style={{ width: '100%', marginTop: '16px' }}>
-                    Reset Filters
-                  </Button>
-                </div>
-              </div>
+              <SearchFilterPanel
+                activeTab={activeTab}
+                filters={filters}
+                onToggleStop={toggleStopFilter}
+                onMaxPriceChange={(maxPrice) => setFilters((prev) => ({ ...prev, maxPrice }))}
+                onReset={() => setFilters({ stops: ['0', '1', '2+'], maxPrice: 1000000 })}
+                formatCurrency={formatCurrency}
+                currency={currency}
+              />
 
               <div className="results-main">
                 {activeTab === 'flights' && (
                   <>
-                    <div className="results-header-modern">
-                      <h2>{filteredFlights.length} Flights Found</h2>
-                      <div className="sort-by">Sort by: <strong>Cheapest First</strong></div>
-                    </div>
+                    <SearchResultsHeader
+                      count={filteredFlights.length}
+                      title="Flights Found"
+                      sortLabel="Cheapest First"
+                      badge="Flights"
+                    />
                     {filteredFlights.length === 0 ? (
                       <div className="empty-results-state">
                         <Plane size={48} opacity={0.5} />
                         <h3>No flights found</h3>
-                        <p>We couldn't find any flights matching your filters.</p>
+                        <p>{warning?.message || "We couldn't find any flights matching your search or filters."}</p>
                       </div>
                     ) : (
-                      <StaggerContainer className="search-results-list" staggerDelay={0.05}>
-                        {(filteredFlights || []).map((flight, idx) => (
-                          <StaggerItem key={idx}>
+                      <StaggerContainer className="search-results-list" staggerDelay={0.05} immediate>
+                        {(filteredFlights || []).map((flight, idx) => {
+                          const cardId = `flight-${idx}`;
+                          return (
+                          <StaggerItem key={cardId}>
+                            <AnimatedResultCard
+                              layoutId={highlightCardId === cardId ? 'search-save-card' : undefined}
+                              highlighted={highlightCardId === cardId}
+                            >
                             <div className="search-result-card flight-card-modern">
                               <div className="flight-airline-box">
                                 <img src={`https://pics.avs.io/80/40/${flight.airline.substring(0, 2).toUpperCase()}.png`} alt={flight.airline} onError={(e) => { e.target.style.display='none'; e.target.nextSibling.style.display='block'; }} className="airline-logo-img" />
@@ -531,7 +510,9 @@ export default function SearchPage() {
                                   <div className="path-line">
                                     {flight.stops > 0 && <span className="stop-dot"></span>}
                                   </div>
-                                  <span className="stops-label">{flight.stops === 0 ? 'Direct' : `${flight.stops} Stop${flight.stops > 1 ? 's' : ''}`}</span>
+                                  <Badge variant={flight.stops === 0 ? 'success' : 'outline'} className="tw-mt-1">
+                                    {flight.stops === 0 ? 'Direct' : `${flight.stops} stop${flight.stops > 1 ? 's' : ''}`}
+                                  </Badge>
                                 </div>
                                 <div className="time-point">
                                   <strong>{new Date(flight.arrivalTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong>
@@ -541,13 +522,15 @@ export default function SearchPage() {
                               <div className="flight-action-box" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                 <div className="flight-price-huge">{formatCurrency(flight.price, flight.currency)}</div>
                                 <Button variant="primary" size="lg" onClick={() => window.open(flight.bookingUrl || '#', '_blank')}>Book</Button>
-                                <Button variant="ghost" size="sm" onClick={() => handleSaveItem('flight', `${flight.airline} ${flight.origin}→${flight.destination}`, flight)}>
+                                <Button variant="ghost" size="sm" onClick={() => handleSaveItem('flight', `${flight.airline} ${flight.origin}→${flight.destination}`, flight, cardId)}>
                                   <Sparkles size={14} style={{ marginRight: '6px' }} /> Save to Trip
                                 </Button>
                               </div>
                             </div>
+                            </AnimatedResultCard>
                           </StaggerItem>
-                        ))}
+                          );
+                        })}
                       </StaggerContainer>
                     )}
                   </>
@@ -555,20 +538,28 @@ export default function SearchPage() {
 
                 {activeTab === 'hotels' && (
                   <>
-                    <div className="results-header-modern">
-                      <h2>{(results?.hotels || []).length} Properties in {hotelForm.location}</h2>
-                      <div className="sort-by">Sort by: <strong>Recommended</strong></div>
-                    </div>
+                    <SearchResultsHeader
+                      count={(results?.hotels || []).length}
+                      title={`Properties in ${hotelForm.location}`}
+                      sortLabel="Recommended"
+                      badge="Hotels"
+                    />
                     {results.hotels.length === 0 ? (
                       <div className="empty-results-state">
                         <Building size={48} opacity={0.5} />
                         <h3>No hotels found</h3>
-                        <p>Try adjusting your search criteria or dates.</p>
+                        <p>{warning?.message || 'Try adjusting your search criteria or dates.'}</p>
                       </div>
                     ) : (
-                      <StaggerContainer className="search-results-list" staggerDelay={0.05}>
-                        {(results?.hotels || []).map((hotel, idx) => (
-                          <StaggerItem key={idx}>
+                      <StaggerContainer className="search-results-list" staggerDelay={0.05} immediate>
+                        {(results?.hotels || []).map((hotel, idx) => {
+                          const cardId = `hotel-${idx}`;
+                          return (
+                          <StaggerItem key={cardId}>
+                            <AnimatedResultCard
+                              layoutId={highlightCardId === cardId ? 'search-save-card' : undefined}
+                              highlighted={highlightCardId === cardId}
+                            >
                             <div className="search-result-card hotel-card-modern">
                               <div className="hotel-card-image" style={{ backgroundImage: `url(${hotel.imageUrl || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=300&fit=crop'})` }}>
                                 {hotel.rating && <div className="floating-rating"><Star size={12} fill="#fff" /> {hotel.rating}</div>}
@@ -587,14 +578,16 @@ export default function SearchPage() {
                                     <span className="price-lbl">/ night</span>
                                   </div>
                                   <Button variant="primary" onClick={() => window.open(hotel.bookingUrl || '#', '_blank')}>View Rooms</Button>
-                                  <Button variant="ghost" size="sm" onClick={() => handleSaveItem('hotel', hotel.name, { ...hotel, price: hotel.pricePerNight })}>
+                                  <Button variant="ghost" size="sm" onClick={() => handleSaveItem('hotel', hotel.name, { ...hotel, price: hotel.pricePerNight }, cardId)}>
                                     <Sparkles size={14} style={{ marginRight: '6px' }} /> Save to Trip
                                   </Button>
                                 </div>
                               </div>
                             </div>
+                            </AnimatedResultCard>
                           </StaggerItem>
-                        ))}
+                          );
+                        })}
                       </StaggerContainer>
                     )}
                   </>
@@ -602,19 +595,28 @@ export default function SearchPage() {
 
                 {activeTab === 'trains' && (
                   <>
-                    <div className="results-header-modern">
-                      <h2>{(results?.trains || []).length} Trains Found</h2>
-                    </div>
+                    <SearchResultsHeader
+                      count={(results?.trains || []).length}
+                      title="Trains Found"
+                      sortLabel="Departure"
+                      badge="Trains"
+                    />
                     {results.trains.length === 0 ? (
                       <div className="empty-results-state">
                         <Train size={48} opacity={0.5} />
                         <h3>No trains found</h3>
-                        <p>Check the station codes (e.g., NDLS) and try again.</p>
+                        <p>{warning?.message || 'Check the station codes (e.g., NDLS) and try again.'}</p>
                       </div>
                     ) : (
-                      <StaggerContainer className="search-results-list" staggerDelay={0.05}>
-                        {(results?.trains || []).map((train, idx) => (
-                          <StaggerItem key={idx}>
+                      <StaggerContainer className="search-results-list" staggerDelay={0.05} immediate>
+                        {(results?.trains || []).map((train, idx) => {
+                          const cardId = `train-${idx}`;
+                          return (
+                          <StaggerItem key={cardId}>
+                            <AnimatedResultCard
+                              layoutId={highlightCardId === cardId ? 'search-save-card' : undefined}
+                              highlighted={highlightCardId === cardId}
+                            >
                             <div className="search-result-card flight-card-modern">
                               <div className="flight-airline-box">
                                 <Train size={32} color="var(--ocean-400)" />
@@ -641,13 +643,15 @@ export default function SearchPage() {
                               <div className="flight-action-box" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                 <div className="flight-price-huge">{formatCurrency(train.price, train.currency)}</div>
                                 <Button variant="primary" size="lg">Book</Button>
-                                <Button variant="ghost" size="sm" onClick={() => handleSaveItem('train', `${train.trainName} (${train.trainNumber})`, train)}>
+                                <Button variant="ghost" size="sm" onClick={() => handleSaveItem('train', `${train.trainName} (${train.trainNumber})`, train, cardId)}>
                                   <Sparkles size={14} style={{ marginRight: '6px' }} /> Save to Trip
                                 </Button>
                               </div>
                             </div>
+                            </AnimatedResultCard>
                           </StaggerItem>
-                        ))}
+                          );
+                        })}
                       </StaggerContainer>
                     )}
                   </>
@@ -655,19 +659,28 @@ export default function SearchPage() {
 
                 {activeTab === 'taxis' && (
                   <>
-                    <div className="results-header-modern">
-                      <h2>{(results?.taxis || []).length} Taxis Available</h2>
-                    </div>
+                    <SearchResultsHeader
+                      count={(results?.taxis || []).length}
+                      title="Taxis Available"
+                      sortLabel="Price"
+                      badge="Taxis"
+                    />
                     {results.taxis.length === 0 ? (
                       <div className="empty-results-state">
                         <Car size={48} opacity={0.5} />
                         <h3>No taxis found</h3>
-                        <p>We couldn't locate any available rides for this route.</p>
+                        <p>{warning?.message || "We couldn't locate any available rides for this route."}</p>
                       </div>
                     ) : (
-                      <StaggerContainer className="search-results-grid" staggerDelay={0.05}>
-                        {(results?.taxis || []).map((taxi, idx) => (
-                          <StaggerItem key={idx}>
+                      <StaggerContainer className="search-results-grid" staggerDelay={0.05} immediate>
+                        {(results?.taxis || []).map((taxi, idx) => {
+                          const cardId = `taxi-${idx}`;
+                          return (
+                          <StaggerItem key={cardId}>
+                            <AnimatedResultCard
+                              layoutId={highlightCardId === cardId ? 'search-save-card' : undefined}
+                              highlighted={highlightCardId === cardId}
+                            >
                             <div className="search-result-card taxi-card-modern">
                               <div className="taxi-img-wrapper">
                                 <Car size={40} color="var(--primary)" />
@@ -680,13 +693,15 @@ export default function SearchPage() {
                               <div className="taxi-action" style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
                                 <div className="taxi-price">{formatCurrency(taxi.price, taxi.currency)}</div>
                                 <Button variant="primary">Reserve</Button>
-                                <Button variant="ghost" size="sm" onClick={() => handleSaveItem('car', `${taxi.company} - ${taxi.carType}`, taxi)}>
+                                <Button variant="ghost" size="sm" onClick={() => handleSaveItem('car', `${taxi.company} - ${taxi.carType}`, taxi, cardId)}>
                                   <Sparkles size={14} style={{ marginRight: '6px' }} /> Save to Trip
                                 </Button>
                               </div>
                             </div>
+                            </AnimatedResultCard>
                           </StaggerItem>
-                        ))}
+                          );
+                        })}
                       </StaggerContainer>
                     )}
                   </>
@@ -701,7 +716,7 @@ export default function SearchPage() {
       {selectedItem && (
         <AddToTripModal 
           open={showAddModal} 
-          onClose={() => setShowAddModal(false)} 
+          onClose={handleCloseAddModal} 
           item={selectedItem} 
         />
       )}

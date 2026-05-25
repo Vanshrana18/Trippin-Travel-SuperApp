@@ -10,6 +10,7 @@ import Select from '../components/shared/Select';
 import StatCard from '../components/shared/StatCard';
 import Skeleton from '../components/shared/Skeleton';
 import EmptyState from '../components/shared/EmptyState';
+import QueryErrorState from '../components/shared/QueryErrorState';
 import { formatDate, formatCurrency } from '../utils/formatters';
 import ScrollReveal from '../components/animations/ScrollReveal';
 import AnimatedCounter from '../components/animations/AnimatedCounter';
@@ -30,7 +31,7 @@ export default function TripsPage() {
   const [createError, setCreateError] = useState('');
   const navigate = useNavigate();
 
-  const { data, isLoading } = useTrips({ status: statusFilter !== 'all' ? statusFilter : undefined });
+  const { data, isLoading, isError, error, refetch } = useTrips({ status: statusFilter !== 'all' ? statusFilter : undefined });
   const createTrip = useCreateTrip();
   const deleteTrip = useDeleteTrip();
 
@@ -118,7 +119,13 @@ export default function TripsPage() {
         </ScrollReveal>
 
         {/* Trips Grid */}
-        {isLoading ? (
+        {isError ? (
+          <QueryErrorState
+            title="Failed to load trips"
+            message={error?.response?.data?.error || error?.message || 'Could not load your trips.'}
+            onRetry={() => refetch()}
+          />
+        ) : isLoading ? (
           <div className="trips-grid">
             {[...Array(6)].map((_, i) => (
               <Skeleton key={i} variant="card" />
