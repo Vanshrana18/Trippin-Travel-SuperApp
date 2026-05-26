@@ -13,6 +13,7 @@ public class FlightSearchResult
     public decimal Price { get; set; }
     public string Currency { get; set; } = "USD";
     public string BookingUrl { get; set; } = string.Empty;
+    public bool IsDemo { get; set; } = false;
 }
 
 public class HotelSearchResult
@@ -25,6 +26,7 @@ public class HotelSearchResult
     public string? ImageUrl { get; set; }
     public double? Rating { get; set; }
     public string BookingUrl { get; set; } = string.Empty;
+    public bool IsDemo { get; set; } = false;
 }
 
 public class TrainSearchResult
@@ -39,6 +41,7 @@ public class TrainSearchResult
     public string Class { get; set; } = string.Empty;
     public decimal Price { get; set; }
     public string Currency { get; set; } = "INR";
+    public bool IsDemo { get; set; } = false;
 }
 
 public class TaxiSearchResult
@@ -49,4 +52,5 @@ public class TaxiSearchResult
     public decimal Price { get; set; }
     public string Currency { get; set; } = "USD";
     public string ImageUrl { get; set; } = string.Empty;
+    public bool IsDemo { get; set; } = false;
 }

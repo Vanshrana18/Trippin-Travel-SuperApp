@@ -35,7 +35,12 @@ export function useSearch() {
       const data = await fetchSearch(endpoint, params);
       setResults((prev) => ({ ...prev, [vertical]: data }));
 
-      if (data.length === 0) {
+      if (data.some(item => item.isDemo)) {
+        setWarning({
+          type: 'demo',
+          message: ' Demo Mode Active — Live Booking API limit reached. Showing hyper-realistic, dynamic mock travel results.',
+        });
+      } else if (data.length === 0) {
         setWarning({
           type: 'empty',
           message: getEmptyResultsHint(vertical),

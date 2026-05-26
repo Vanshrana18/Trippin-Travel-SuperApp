@@ -28,6 +28,7 @@ builder.Services.AddScoped<ReviewService>();
 builder.Services.AddScoped<ItineraryService>();
 builder.Services.AddScoped<OAuthService>();
 builder.Services.AddHttpClient();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<RapidTravelService>();
 builder.Services.AddSingleton<GeminiService>();
 builder.Services.AddSingleton<PexelsService>();

@@ -492,6 +492,13 @@ export default function SearchPage() {
                               highlighted={highlightCardId === cardId}
                             >
                             <div className="search-result-card flight-card-modern">
+                              {flight.isDemo && (
+                                <div className="demo-card-badge-container">
+                                  <Badge className="demo-card-badge">
+                                    <Sparkles size={10} style={{ marginRight: '4px' }} /> Demo
+                                  </Badge>
+                                </div>
+                              )}
                               <div className="flight-airline-box">
                                 <img src={`https://pics.avs.io/80/40/${flight.airline.substring(0, 2).toUpperCase()}.png`} alt={flight.airline} onError={(e) => { e.target.style.display='none'; e.target.nextSibling.style.display='block'; }} className="airline-logo-img" />
                                 <Plane size={24} className="airline-logo-fallback" style={{ display: 'none', color: 'var(--ocean-400)' }} />
@@ -561,6 +568,13 @@ export default function SearchPage() {
                               highlighted={highlightCardId === cardId}
                             >
                             <div className="search-result-card hotel-card-modern">
+                              {hotel.isDemo && (
+                                <div className="demo-card-badge-container">
+                                  <Badge className="demo-card-badge">
+                                    <Sparkles size={10} style={{ marginRight: '4px' }} /> Demo
+                                  </Badge>
+                                </div>
+                              )}
                               <div className="hotel-card-image" style={{ backgroundImage: `url(${hotel.imageUrl || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=300&fit=crop'})` }}>
                                 {hotel.rating && <div className="floating-rating"><Star size={12} fill="#fff" /> {hotel.rating}</div>}
                               </div>
@@ -618,6 +632,13 @@ export default function SearchPage() {
                               highlighted={highlightCardId === cardId}
                             >
                             <div className="search-result-card flight-card-modern">
+                              {train.isDemo && (
+                                <div className="demo-card-badge-container">
+                                  <Badge className="demo-card-badge">
+                                    <Sparkles size={10} style={{ marginRight: '4px' }} /> Demo
+                                  </Badge>
+                                </div>
+                              )}
                               <div className="flight-airline-box">
                                 <Train size={32} color="var(--ocean-400)" />
                                 <div className="airline-details">
@@ -682,6 +703,13 @@ export default function SearchPage() {
                               highlighted={highlightCardId === cardId}
                             >
                             <div className="search-result-card taxi-card-modern">
+                              {taxi.isDemo && (
+                                <div className="demo-card-badge-container">
+                                  <Badge className="demo-card-badge">
+                                    <Sparkles size={10} style={{ marginRight: '4px' }} /> Demo
+                                  </Badge>
+                                </div>
+                              )}
                               <div className="taxi-img-wrapper">
                                 <Car size={40} color="var(--primary)" />
                               </div>

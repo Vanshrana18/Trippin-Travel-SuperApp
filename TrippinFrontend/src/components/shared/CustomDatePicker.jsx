@@ -1,14 +1,25 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function CustomDatePicker({ value, onChange, label }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [viewDate, setViewDate] = useState(() => {
     const d = value ? new Date(value) : new Date();
     return isNaN(d) ? new Date() : d;
   });
   const containerRef = useRef(null);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 480);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -82,6 +93,72 @@ export default function CustomDatePicker({ value, onChange, label }) {
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
+  const renderCalendar = () => {
+    if (!isOpen) return null;
+
+    const calendarContent = (
+      <>
+        <div className="calendar-header">
+          <button type="button" onClick={handlePrevMonth}><ChevronLeft size={18} /></button>
+          <div className="calendar-month-year">
+            {monthNames[viewDate.getMonth()]} {viewDate.getFullYear()}
+          </div>
+          <button type="button" onClick={handleNextMonth}><ChevronRight size={18} /></button>
+        </div>
+        
+        <div className="calendar-weekdays">
+          {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => <div key={d}>{d}</div>)}
+        </div>
+        
+        <div className="calendar-grid">
+          {renderDays()}
+        </div>
+      </>
+    );
+
+    if (isMobile) {
+      const content = (
+        <div className="mobile-drawer-portal">
+          <motion.div 
+            className="mobile-drawer-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsOpen(false)}
+          />
+          <motion.div 
+            className="mobile-drawer-sheet mobile-datepicker-sheet"
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", damping: 25, stiffness: 220 }}
+          >
+            <div className="mobile-drawer-header">
+              <div className="mobile-drawer-indicator" />
+              <h3>{label || 'Select Date'}</h3>
+            </div>
+            <div className="mobile-drawer-calendar-body">
+              {calendarContent}
+            </div>
+          </motion.div>
+        </div>
+      );
+      return createPortal(content, document.body);
+    }
+
+    return (
+      <motion.div
+        className="custom-datepicker-dropdown"
+        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+      >
+        {calendarContent}
+      </motion.div>
+    );
+  };
+
   return (
     <div className="custom-datepicker-container" ref={containerRef}>
       <div 
@@ -95,31 +172,7 @@ export default function CustomDatePicker({ value, onChange, label }) {
       </div>
 
       <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            className="custom-datepicker-dropdown"
-            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <div className="calendar-header">
-              <button type="button" onClick={handlePrevMonth}><ChevronLeft size={18} /></button>
-              <div className="calendar-month-year">
-                {monthNames[viewDate.getMonth()]} {viewDate.getFullYear()}
-              </div>
-              <button type="button" onClick={handleNextMonth}><ChevronRight size={18} /></button>
-            </div>
-            
-            <div className="calendar-weekdays">
-              {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => <div key={d}>{d}</div>)}
-            </div>
-            
-            <div className="calendar-grid">
-              {renderDays()}
-            </div>
-          </motion.div>
-        )}
+        {renderCalendar()}
       </AnimatePresence>
     </div>
   );
