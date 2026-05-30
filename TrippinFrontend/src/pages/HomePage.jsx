@@ -121,10 +121,10 @@ export default function HomePage() {
           >
             <div className="hero-visual-grid">
               <Tilt3D intensity={10} scale={1.03} className="hero-visual-card">
-                <img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=500&h=560&fit=crop" alt="Tropical beach paradise" />
+                <img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=500&h=560&fit=crop&q=75&auto=format,compress" alt="Tropical beach paradise" />
               </Tilt3D>
               <Tilt3D intensity={10} scale={1.03} className="hero-visual-card" style={{ marginTop: 'var(--space-8)' }}>
-                <img src="https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=500&h=560&fit=crop" alt="Mountain lake adventure" />
+                <img src="https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=500&h=560&fit=crop&q=75&auto=format,compress" alt="Mountain lake adventure" />
               </Tilt3D>
             </div>
           </motion.div>
