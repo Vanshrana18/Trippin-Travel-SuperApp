@@ -12,6 +12,8 @@ public static class ApiEndpoints
     {
         var api = app.MapGroup("/api").RequireRateLimiting("PublicApi");
 
+        api.MapGet("/ping", () => Results.Ok(new { status = "healthy", message = "pong" })).AllowAnonymous();
+
         MapAuth(api);
         MapUsers(api);
         MapDestinations(api);

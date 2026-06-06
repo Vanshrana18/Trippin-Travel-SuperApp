@@ -213,7 +213,7 @@ export default function DiscoverPage() {
           </ScrollReveal>
         ) : (
           <>
-            <StaggerContainer className="destinations-grid" staggerDelay={0.08}>
+            <StaggerContainer key={`grid-${category}-${isFiltering}`} className="destinations-grid" staggerDelay={0.08}>
               {displayDestinations.map((dest, index) => (
                 <StaggerItem key={dest.id}>
                   <motion.div whileHover={{ y: -4, scale: 1.01 }}>

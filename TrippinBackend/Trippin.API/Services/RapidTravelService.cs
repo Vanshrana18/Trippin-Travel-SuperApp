@@ -291,10 +291,15 @@ public class RapidTravelService(HttpClient httpClient, IConfiguration config, IM
             var results = new List<HotelSearchResult>();
 
             JsonElement list = default;
-            if (json.TryGetProperty("data", out var d))
+            if (json.ValueKind == JsonValueKind.Array)
+            {
+                list = json;
+            }
+            else if (json.ValueKind == JsonValueKind.Object && json.TryGetProperty("data", out var d))
             {
                 if (d.TryGetProperty("hotels", out var h)) list = h;
                 else if (d.TryGetProperty("results", out var r)) list = r;
+                else if (d.ValueKind == JsonValueKind.Array) list = d;
             }
 
             if (list.ValueKind == JsonValueKind.Array)

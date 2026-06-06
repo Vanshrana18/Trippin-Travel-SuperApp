@@ -1,6 +1,8 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import api from './api/axios';
 import Layout from './components/layout/Layout';
 import ScrollToTop from './components/layout/ScrollToTop';
 import ProtectedRoute from './components/routes/ProtectedRoute';
@@ -77,6 +79,11 @@ function AnimatedRoutes() {
 }
 
 export default function App() {
+  useEffect(() => {
+    // Wake up Azure App Service as early as possible
+    api.get('/ping').catch((err) => console.error('Ping error:', err));
+  }, []);
+
   return (
     <BrowserRouter>
       <ScrollToTop />
