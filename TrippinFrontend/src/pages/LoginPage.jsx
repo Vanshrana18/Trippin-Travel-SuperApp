@@ -15,7 +15,7 @@ export default function LoginPage() {
 
   const handleSocial = async (provider) => {
     setError('');
-    const redirectUri = encodeURIComponent('http://localhost:5173/auth/callback');
+    const redirectUri = encodeURIComponent(`${window.location.origin}/auth/callback`);
     
     try {
       if (provider === 'google') {
@@ -31,7 +31,11 @@ export default function LoginPage() {
         const state = 'github';
         window.location.href = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&state=${state}`;
       } else if (provider === 'microsoft') {
-        console.log('Microsoft login clicked');
+        const clientId = import.meta.env.VITE_MICROSOFT_CLIENT_ID || 'YOUR_MICROSOFT_CLIENT_ID';
+        const scope = encodeURIComponent('openid email profile User.Read');
+        const state = 'microsoft';
+        const nonce = Math.random().toString(36).substring(2);
+        window.location.href = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=id_token&scope=${scope}&state=${state}&nonce=${nonce}&response_mode=fragment`;
       }
     } catch {
       setError(`${provider} login failed`);

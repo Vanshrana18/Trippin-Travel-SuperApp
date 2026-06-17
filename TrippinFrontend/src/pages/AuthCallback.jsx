@@ -2,18 +2,20 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { motion } from 'framer-motion';
+import { AlertCircle } from 'lucide-react';
+import Button from '../components/shared/Button';
 
 export default function AuthCallback() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { loginWithGitHub, loginWithGoogle } = useAuth(); // Assume these are added to AuthContext or we will add them
+  const { loginWithGitHub, loginWithGoogle, loginWithMicrosoft } = useAuth();
   const [error, setError] = useState(null);
   const isProcessing = useRef(false);
 
   useEffect(() => {
     if (isProcessing.current) return;
 
-    // Extract params from both search and fragment (Google uses fragment for id_token)
+    // Extract params from both search and fragment (Google/MS use fragment for id_token)
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
     const code = searchParams.get('code') || hashParams.get('code');
     const idToken = hashParams.get('id_token');
@@ -35,9 +37,9 @@ export default function AuthCallback() {
         if (state === 'github') {
           await loginWithGitHub(code);
         } else if (state === 'google') {
-          // If we have id_token, use it. If we have code, we might need a different method.
-          // But our current redirect uses id_token.
           await loginWithGoogle(idToken || code);
+        } else if (state === 'microsoft') {
+          await loginWithMicrosoft(idToken);
         } else {
           throw new Error(`Unknown provider: ${state}`);
         }
@@ -49,31 +51,69 @@ export default function AuthCallback() {
     };
 
     processLogin();
-  }, [searchParams, navigate, loginWithGitHub, loginWithGoogle]);
+  }, [searchParams, navigate, loginWithGitHub, loginWithGoogle, loginWithMicrosoft]);
 
   if (error) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'red' }}>
-        <h2>Authentication Error</h2>
-        <p>{error}</p>
-        <button onClick={() => navigate('/login')} style={{ marginTop: '20px' }}>Back to Login</button>
+      <div style={{ 
+        minHeight: '100vh', 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        padding: '2rem',
+        backgroundColor: '#0a0a0c',
+        color: '#f3f4f6'
+      }}>
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          maxWidth: '400px',
+          width: '100%',
+          textAlign: 'center',
+          backgroundColor: '#121216',
+          padding: '2.5rem',
+          borderRadius: '16px',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+          border: '1px solid #27272a'
+        }}>
+          <AlertCircle size={48} color="#ef4444" style={{ marginBottom: '1.5rem' }} />
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '0.75rem', color: '#f3f4f6' }}>
+            Authentication Error
+          </h2>
+          <p style={{ color: '#a1a1aa', fontSize: '0.95rem', marginBottom: '2rem', lineHeight: '1.5' }}>
+            {error}
+          </p>
+          <Button variant="primary" onClick={() => navigate('/login')} style={{ width: '100%' }}>
+            Back to Login
+          </Button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ 
+      minHeight: '100vh', 
+      display: 'flex', 
+      flexDirection: 'column', 
+      alignItems: 'center', 
+      justifyContent: 'center', 
+      backgroundColor: '#0a0a0c' 
+    }}>
       <motion.div
         animate={{ rotate: 360 }}
         transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
         style={{
           width: '40px',
           height: '40px',
-          border: '4px solid var(--ink-muted)',
-          borderTopColor: 'var(--terra-500)',
+          border: '4px solid #27272a',
+          borderTopColor: '#f97316',
           borderRadius: '50%',
         }}
       />
     </div>
   );
 }
+

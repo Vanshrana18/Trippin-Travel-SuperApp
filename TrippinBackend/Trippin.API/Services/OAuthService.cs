@@ -45,7 +45,11 @@ public class OAuthService(AppDbContext db, JwtHelper jwt, IConfiguration config,
             await db.SaveChangesAsync(ct);
             return CreateAuthResponse(user);
         }
-        catch { return null; }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Google OAuth Error]: {ex}");
+            return null;
+        }
     }
 
     public async Task<AuthResponse?> LoginWithGitHubAsync(string code, CancellationToken ct = default)
@@ -106,7 +110,11 @@ public class OAuthService(AppDbContext db, JwtHelper jwt, IConfiguration config,
             await db.SaveChangesAsync(ct);
             return CreateAuthResponse(user);
         }
-        catch { return null; }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[GitHub OAuth Error]: {ex}");
+            return null;
+        }
     }
 
     public async Task<AuthResponse?> LoginWithMicrosoftAsync(string idToken, CancellationToken ct = default)
@@ -148,7 +156,11 @@ public class OAuthService(AppDbContext db, JwtHelper jwt, IConfiguration config,
             await db.SaveChangesAsync(ct);
             return CreateAuthResponse(user);
         }
-        catch { return null; }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Microsoft OAuth Error]: {ex}");
+            return null;
+        }
     }
 
     private AuthResponse CreateAuthResponse(User user)
