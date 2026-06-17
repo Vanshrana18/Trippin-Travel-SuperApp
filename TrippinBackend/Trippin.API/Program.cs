@@ -80,7 +80,11 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 builder.Services.AddCors(o => o.AddPolicy("Frontend", p => p
-    .WithOrigins("http://localhost:5173", "https://trippin-travel-super-app.vercel.app" , "http://localhost:3000")
+    .SetIsOriginAllowed(origin => 
+    {
+        var host = new Uri(origin).Host;
+        return host == "localhost" || host.EndsWith(".vercel.app");
+    })
     .AllowAnyHeader()
     .AllowAnyMethod()));
 
