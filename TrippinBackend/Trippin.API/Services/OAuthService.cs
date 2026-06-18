@@ -48,7 +48,7 @@ public class OAuthService(AppDbContext db, JwtHelper jwt, IConfiguration config,
         catch (Exception ex)
         {
             Console.WriteLine($"[Google OAuth Error]: {ex}");
-            return null;
+            throw; // Re-throw so endpoint returns the actual error, not a silent 401
         }
     }
 
