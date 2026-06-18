@@ -13,9 +13,18 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
+ if(builder.Environment.IsDevelopment())
+    {
     options.UseSqlServer(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        sql => sql.EnableRetryOnFailure(3));
+    }
+    else
+    {
+        options.UseSqlServer(
         builder.Configuration.GetConnectionString("AzureConnection"),
         sql => sql.EnableRetryOnFailure(3));
+    }
 });
 
 builder.Services.AddSingleton<JwtHelper>();
